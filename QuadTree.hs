@@ -7,6 +7,8 @@ module QuadTree ( makeZone
                 , showZone, printZone ) where
 
 import Control.Lens (Lens', lens)
+import Data.List (find)
+import Data.Maybe (fromJust)
 
 ---- Structures:
 
@@ -125,10 +127,8 @@ makeZone (x,y) a
   | otherwise = Wrapper { wrappedTree = Leaf a
                         , zoneLength = x
                         , zoneWidth  = y
-                        , zoneDepth = ceiling $
-                                      logBase 2 $
-                                      max (fromIntegral x)
-                                          (fromIntegral y) }
+                        , zoneDepth = fromJust $
+                            find (>= (max x y)) (iterate (*2) 1) }
 
 
 -- Sample Printers:
@@ -167,4 +167,4 @@ printZone = ((.).(.)) putStr showZone
 
 -- x5 = set (atLocation (2,3)) 1 (makeZone (5,7) 0)
 -- x6 = set (atLocation (2,3)) 1 (makeZone (6,7) 0)
--- p n = printZone show n
+-- p n = printZone (head . show) n
