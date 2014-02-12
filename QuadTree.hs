@@ -27,7 +27,7 @@ instance Show a => Show (QuadZone a) where
               ":" ++ show (wrappedTree zone) ++ ">"
     where dimensions = show l ++ "x" ++ show w
           l = zoneLength zone
-          w = zoneWidth zone
+          w = zoneWidth  zone
 
 --
 
@@ -73,7 +73,7 @@ getLocation index zone
               | x <  mid && y <  mid  = a
               | x >= mid && y <  mid  = b
               | x <  mid && y >= mid  = c
-              | x >= mid && y >= mid  = d
+              | otherwise             = d
 
 setLocation :: forall a. Eq a => Location -> QuadZone a -> a -> QuadZone a
 setLocation index zone new
@@ -93,14 +93,14 @@ setLocation index zone new
     go (x,y) n (Node a b c d) = fusedNode
       where fusedNode =
               case newNode of
-                Node (Leaf a) (Leaf b) (Leaf c) (Leaf d)
-                  | a == b && b == c && c == d -> Leaf a
+                Node (Leaf a') (Leaf b') (Leaf c') (Leaf d')
+                  | a' == b' && b' == c' && c' == d' -> Leaf a'
                 _ -> newNode
             newNode
               | x <  mid && y <  mid  = Node (recurse a) b c d
               | x >= mid && y <  mid  = Node a (recurse b) c d
               | x <  mid && y >= mid  = Node a b (recurse c) d
-              | x >= mid && y >= mid  = Node a b c (recurse d)
+              | otherwise             = Node a b c (recurse d)
             recurse = go (x `mod` mid, y `mod` mid) (n - 1)
             mid = 2 ^ (n - 1)
 
@@ -115,7 +115,7 @@ balanceIndex :: QuadZone a -> Location -> Location
 balanceIndex zone (x,y) = (x + xOffset, y + yOffset)
   where dimension = 2 ^ zoneDepth zone
         xOffset = (dimension - zoneLength zone) `div` 2
-        yOffset = (dimension - zoneWidth zone) `div` 2
+        yOffset = (dimension - zoneWidth  zone) `div` 2
 
 -- Constructor:
 
