@@ -4,7 +4,7 @@
 module QuadTree ( makeZone
                 , atLocation
                 , outOfBounds
-                , showZone, printZone ) where
+                , printZone, putZone ) where
 
 import Control.Lens (Lens', lens)
 
@@ -114,8 +114,24 @@ outOfBounds zone (x,y) = x < 0 || y < 0
 balanceIndex :: QuadZone a -> Location -> Location
 balanceIndex zone (x,y) = (x + xOffset, y + yOffset)
   where dimension = 2 ^ zoneDepth zone
-        xOffset = (dimension - zoneLength zone) `div` 2
-        yOffset = (dimension - zoneWidth zone) `div` 2
+        xOffset = dimension - zoneLength zone
+        yOffset = dimension - zoneWidth zone
+
+-- Printers:
+
+printZone :: Show a => QuadZone a -> String
+printZone zone = breakString (zoneWidth zone) $ concat string
+  where string   = map show charGrid
+        charGrid = [getLocation (x,y) zone |
+                    x <- [0 .. pred $ zoneLength zone],
+                    y <- [0 .. pred $ zoneWidth zone ]]
+        breakString :: Int -> String -> String
+        breakString _ [] = []
+        breakString n xs = a ++ "\n" ++ breakString n b
+          where (a,b) = splitAt n xs
+
+putZone :: Show a => QuadZone a -> IO ()
+putZone = putStr . printZone
 
 -- Constructor:
 
@@ -129,24 +145,6 @@ makeZone (x,y) a
                                       logBase 2 $
                                       max (fromIntegral x)
                                           (fromIntegral y) }
-
-
--- Sample Printers:
-
-showZone :: (a -> Char) -> QuadZone a -> String
-showZone printer zone = breakString (zoneWidth zone) string
-  where string   = map printer grid
-        grid = [getLocation (x,y) zone |
-                x <- [0 .. pred $ zoneLength zone],
-                y <- [0 .. pred $ zoneWidth  zone]]
-        breakString :: Int -> String -> String
-        breakString _ [] = []
-        breakString n xs = a ++ "\n" ++ breakString n b
-          where (a,b) = splitAt n xs
-
-printZone :: (a -> Char) -> QuadZone a -> IO ()
-printZone = ((.).(.)) putStr showZone
-
 
 --------- Test:
 
@@ -167,4 +165,4 @@ printZone = ((.).(.)) putStr showZone
 
 -- x5 = set (atLocation (2,3)) 1 (makeZone (5,7) 0)
 -- x6 = set (atLocation (2,3)) 1 (makeZone (6,7) 0)
--- p n = printZone show n
+-- p n = putStr $ printZone n
