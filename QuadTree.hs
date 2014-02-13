@@ -18,7 +18,7 @@ type Location = (Int, Int)
 
 data QuadZone a = Wrapper { wrappedTree :: QuadTree a
                           , zoneLength :: Int
-                          , zoneWidth :: Int
+                          , zoneWidth  :: Int
                           , zoneDepth :: Int }
 
 instance Functor QuadZone where
@@ -72,10 +72,10 @@ getLocation index zone
       go (x `mod` mid, y `mod` mid) (n - 1) node
       where mid = 2 ^ (n - 1)
             node
-              | x <  mid && y <  mid  = a
-              | x >= mid && y <  mid  = b
-              | x <  mid && y >= mid  = c
-              | otherwise             = d
+              | y < mid   = if x < mid then a
+                                       else b
+              | otherwise = if x < mid then c
+                                       else d
 
 setLocation :: forall a. Eq a => Location -> QuadZone a -> a -> QuadZone a
 setLocation index zone new
@@ -99,10 +99,10 @@ setLocation index zone new
                   | a' == b' && b' == c' && c' == d' -> Leaf a'
                 _ -> newNode
             newNode
-              | x <  mid && y <  mid  = Node (recurse a) b c d
-              | x >= mid && y <  mid  = Node a (recurse b) c d
-              | x <  mid && y >= mid  = Node a b (recurse c) d
-              | otherwise             = Node a b c (recurse d)
+              | y < mid   = if x < mid then Node (recurse a) b c d
+                                       else Node a (recurse b) c d
+              | otherwise = if x < mid then Node a b (recurse c) d
+                                       else Node a b c (recurse d)
             recurse = go (x `mod` mid, y `mod` mid) (n - 1)
             mid = 2 ^ (n - 1)
 
@@ -111,7 +111,7 @@ setLocation index zone new
 outOfBounds :: QuadZone a -> Location -> Bool
 outOfBounds zone (x,y) = x < 0 || y < 0
                          || x >= zoneLength zone
-                         || y >= zoneWidth zone
+                         || y >= zoneWidth  zone
 
 balanceIndex :: QuadZone a -> Location -> Location
 balanceIndex zone (x,y) = (x + xOffset, y + yOffset)
@@ -127,8 +127,9 @@ makeZone (x,y) a
   | otherwise = Wrapper { wrappedTree = Leaf a
                         , zoneLength = x
                         , zoneWidth  = y
-                        , zoneDepth = fromJust $
-                            find (>= (max x y)) (iterate (*2) 1) }
+                        , zoneDepth = fst . fromJust $
+                            find ((>= (max x y)) . snd) $
+                              zip [0..] (iterate (*2) 1) }
 
 
 -- Sample Printers:
