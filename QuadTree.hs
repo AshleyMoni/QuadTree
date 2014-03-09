@@ -1,3 +1,4 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -6,9 +7,13 @@ module QuadTree ( makeZone
                 , outOfBounds, fuseZone
                 , showZone, printZone ) where
 
-import Control.Lens (Lens', lens)
+import Control.Lens (Lens', lens, set)
 import Data.List (find)
 import Data.Maybe (fromJust)
+
+-- Foldable:
+import Data.Foldable (Foldable, foldr, toList)
+import Prelude hiding (foldr)
 
 ---- Structures:
 
@@ -23,6 +28,9 @@ data QuadZone a = Wrapper { wrappedTree :: QuadTree a
 
 instance Functor QuadZone where
   fmap fn = onTree $ fmap fn
+
+instance Foldable QuadZone where
+  foldr fn initial = foldr fn initial . wrappedTree
 
 instance Show a => Show (QuadZone a) where
   show zone = "<" ++ dimensions ++
@@ -45,6 +53,11 @@ instance Functor QuadTree where
                                 (fmap fn b)
                                 (fmap fn c)
                                 (fmap fn d)
+
+instance Foldable QuadTree where
+  foldr fn z (Node a b c d) =
+    foldr fn (foldr fn (foldr fn (foldr fn z d) c) b) a
+  foldr fn z (Leaf a)       = fn a z
 
 instance Show a => Show (QuadTree a) where
   show (Leaf x)       = show x
@@ -140,9 +153,6 @@ fuseTree leaf@(_)       = leaf
 onTree :: (QuadTree a -> QuadTree b) -> QuadZone a -> QuadZone b
 onTree fn zone = zone {wrappedTree = fn (wrappedTree zone)}
 
--- onNodes :: (a -> b) -> QuadTree a -> QuadTree b
--- onNodes fn (Node a b c d) = Node (fn a) (fn b) (fn c) (fn d)
-
 ---- Constructor:
 
 makeZone :: (Int, Int) -> a -> QuadZone a
@@ -175,21 +185,21 @@ printZone = ((.).(.)) putStr showZone
 
 --------- Test:
 
--- x' :: QuadZone Int
--- x' = Wrapper { zoneLength = 4
---             , zoneWidth = 4
---             , zoneDepth = 2
---             , wrappedTree = y' }
+x' :: QuadZone Int
+x' = Wrapper { zoneLength = 4
+            , zoneWidth = 4
+            , zoneDepth = 2
+            , wrappedTree = y' }
 
--- y' :: QuadTree Int
--- y' = Node (Leaf 1)
---           (Node (Leaf 1)
---                 (Leaf 0)
---                 (Leaf 0)
---                 (Leaf 0))
---           (Leaf 1)
---           (Leaf 1)
+y' :: QuadTree Int
+y' = Node (Leaf 1)
+          (Node (Leaf 1)
+                (Leaf 0)
+                (Leaf 0)
+                (Leaf 0))
+          (Leaf 1)
+          (Leaf 1)
 
--- x5 = set (atLocation (2,3)) 1 (makeZone (5,7) 0)
--- x6 = set (atLocation (2,3)) 1 (makeZone (6,7) 0)
--- p n = printZone (head . show) n
+x5 = set (atLocation (2,3)) 1 (makeZone (5,7) 0)
+x6 = set (atLocation (2,3)) 1 (makeZone (6,7) 0)
+p n = printZone (head . show) n
