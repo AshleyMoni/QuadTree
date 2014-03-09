@@ -3,7 +3,7 @@
 
 module QuadTree ( makeZone
                 , atLocation
-                , outOfBounds
+                , outOfBounds, fuseZone
                 , showZone, printZone ) where
 
 import Control.Lens (Lens', lens)
@@ -22,7 +22,7 @@ data QuadZone a = Wrapper { wrappedTree :: QuadTree a
                           , zoneDepth :: Int }
 
 instance Functor QuadZone where
-  fmap fn zone = zone { wrappedTree = fmap fn (wrappedTree zone) }
+  fmap fn = onTree $ fmap fn
 
 instance Show a => Show (QuadZone a) where
   show zone = "<" ++ dimensions ++
@@ -93,11 +93,7 @@ setLocation index zone new
       where l = Leaf old
     go _     0 _    = error "Wrapped tree is deeper than zone depth."
     go (x,y) n (Node a b c d) = fusedNode
-      where fusedNode =
-              case newNode of
-                Node (Leaf a') (Leaf b') (Leaf c') (Leaf d')
-                  | a' == b' && b' == c' && c' == d' -> Leaf a'
-                _ -> newNode
+      where fusedNode = fuse newNode
             newNode
               | y < mid   = if x < mid then Node (recurse a) b c d
                                        else Node a (recurse b) c d
@@ -106,7 +102,7 @@ setLocation index zone new
             recurse = go (x `mod` mid, y `mod` mid) (n - 1)
             mid = 2 ^ (n - 1)
 
--- Helpers:
+---- Helpers:
 
 outOfBounds :: QuadZone a -> Location -> Bool
 outOfBounds zone (x,y) = x < 0 || y < 0
@@ -119,7 +115,35 @@ balanceIndex zone (x,y) = (x + xOffset, y + yOffset)
         xOffset = (dimension - zoneLength zone) `div` 2
         yOffset = (dimension - zoneWidth  zone) `div` 2
 
--- Constructor:
+fuse :: Eq a => QuadTree a -> QuadTree a
+fuse (Node (Leaf a) (Leaf b) (Leaf c) (Leaf d))
+  | a == b && b == c && c == d = Leaf a
+fuse oldNode                   = oldNode
+
+---- Functor Helpers:
+
+{- fuseZone is an exported helper function for treating QuadZones as
+   functors. It won't properly garbage collect equivalent nodes under
+   a simple fmap, so a cleanup function is needed to compress it
+   back down to its proper size. -}
+
+fuseZone :: Eq a => QuadZone a -> QuadZone a
+fuseZone = onTree fuseTree
+
+fuseTree :: Eq a => QuadTree a -> QuadTree a
+fuseTree (Node a b c d) = fuse $ Node (fuseTree a)
+                                      (fuseTree b)
+                                      (fuseTree c)
+                                      (fuseTree d)
+fuseTree leaf@(_)       = leaf
+
+onTree :: (QuadTree a -> QuadTree b) -> QuadZone a -> QuadZone b
+onTree fn zone = zone {wrappedTree = fn (wrappedTree zone)}
+
+-- onNodes :: (a -> b) -> QuadTree a -> QuadTree b
+-- onNodes fn (Node a b c d) = Node (fn a) (fn b) (fn c) (fn d)
+
+---- Constructor:
 
 makeZone :: (Int, Int) -> a -> QuadZone a
 makeZone (x,y) a
@@ -132,7 +156,7 @@ makeZone (x,y) a
                               zip [0..] (iterate (*2) 1) }
 
 
--- Sample Printers:
+---- Sample Printers:
 
 showZone :: (a -> Char) -> QuadZone a -> String
 showZone printer zone = breakString (zoneWidth zone) string
@@ -151,20 +175,20 @@ printZone = ((.).(.)) putStr showZone
 
 --------- Test:
 
--- x :: QuadZone Int
--- x = Wrapper { zoneLength = 4
+-- x' :: QuadZone Int
+-- x' = Wrapper { zoneLength = 4
 --             , zoneWidth = 4
 --             , zoneDepth = 2
---             , wrappedTree = y }
+--             , wrappedTree = y' }
 
--- y :: QuadTree Int
--- y = Node (Leaf 1)
---          (Node (Leaf 1)
---                (Leaf 0)
---                (Leaf 0)
---                (Leaf 0))
---          (Leaf 1)
---          (Leaf 1)
+-- y' :: QuadTree Int
+-- y' = Node (Leaf 1)
+--           (Node (Leaf 1)
+--                 (Leaf 0)
+--                 (Leaf 0)
+--                 (Leaf 0))
+--           (Leaf 1)
+--           (Leaf 1)
 
 -- x5 = set (atLocation (2,3)) 1 (makeZone (5,7) 0)
 -- x6 = set (atLocation (2,3)) 1 (makeZone (6,7) 0)
