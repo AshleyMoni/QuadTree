@@ -12,7 +12,8 @@ import Data.List (find)
 import Data.Maybe (fromJust)
 
 -- Foldable:
-import Data.Foldable (Foldable, foldr, toList)
+
+import Data.Foldable (Foldable, foldr, foldl')
 import Prelude hiding (foldr)
 
 ---- Structures:
@@ -30,12 +31,12 @@ instance Functor QuadZone where
   fmap fn = onTree $ fmap fn
 
 instance Foldable QuadZone where
-  foldr fn z zone = foldZone fn (zoneDepth zone) z (wrappedTree zone)
+  foldr fn z zone = foldZone fn (zoneDepth zone) (wrappedTree zone) z
 
-foldZone :: (a -> b -> b) -> Int -> b -> QuadTree a -> b
-foldZone fn n z (Leaf a) = foldr fn z $ replicate (2 ^ (2 * n)) a
+foldZone :: (a -> b -> b) -> Int -> QuadTree a -> b -> b
+foldZone fn n (Leaf a) z = foldr fn z $ replicate (2 ^ (2 * n)) a
 foldZone _  0 _ _        = error "Wrapped tree is deeper than zone depth."
-foldZone fn n z (Node a b c d) = go (go (go (go z d) c) b) a
+foldZone fn n (Node a b c d) z = foldr go z [a,b,c,d]
   where go = foldZone fn (n - 1)
 
 instance Show a => Show (QuadZone a) where
