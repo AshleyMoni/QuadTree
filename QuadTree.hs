@@ -30,7 +30,13 @@ instance Functor QuadZone where
   fmap fn = onTree $ fmap fn
 
 instance Foldable QuadZone where
-  foldr fn initial = foldr fn initial . wrappedTree
+  foldr fn z zone = foldZone fn (zoneDepth zone) z (wrappedTree zone)
+
+foldZone :: (a -> b -> b) -> Int -> b -> QuadTree a -> b
+foldZone fn n z (Leaf a) = foldr fn z $ replicate (2 ^ (2 * n)) a
+foldZone _  0 _ _        = error "Wrapped tree is deeper than zone depth."
+foldZone fn n z (Node a b c d) = go (go (go (go z d) c) b) a
+  where go = foldZone fn (n - 1)
 
 instance Show a => Show (QuadZone a) where
   show zone = "<" ++ dimensions ++
