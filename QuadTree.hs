@@ -154,11 +154,10 @@ fuseTree leaf           = leaf
 --   Region = (floorX, floorY, ceilX, ceilY)
 type Region = (Int,    Int,    Int,   Int)
 
-foldZone :: (a -> b -> b) -> b -> QuadZone a -> b
-foldZone fn z zone = foldr fn z expandedList
-  where expandedList = concat $
-                       map (\(a, r) -> replicate (regionArea r) a) $
-                       regionList zone
+foldZone :: forall a b. (a -> b -> b) -> b -> QuadZone a -> b
+foldZone fn z = foldr fn z . concatMap expand . regionList
+  where expand :: (a, Region) -> [a]
+        expand (a, r) = replicate (regionArea r) a
 
 regionList :: QuadZone a -> [(a, Region)]
 regionList zone = go (zoneRegion zone) (wrappedTree zone) []
