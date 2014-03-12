@@ -160,15 +160,18 @@ foldZone fn z = foldr fn z . concatMap expand . regionList
         expand (a, r) = replicate (regionArea r) a
 
 regionList :: QuadZone a -> [(a, Region)]
-regionList zone = go (zoneRegion zone) (wrappedTree zone) []
-  where go :: Region -> QuadTree a -> [(a, Region)] -> [(a, Region)]
-        go r (Leaf a) z = (a, intersection) : z
+regionList = foldRegions (:) []
+
+foldRegions :: forall a b. ((a, Region) -> b -> b) -> b -> QuadZone a -> b
+foldRegions fn z zone = go (zoneRegion zone) (wrappedTree zone) z
+  where go :: Region -> QuadTree a -> b -> b
+        go r (Leaf a) = fn (a, intersection)
           where intersection = regionIntersection (boundaries zone) r
-        go (xl, yt, xr, yb) (Node a b c d) z =
-          go (xl,       yt,       midx, midy) a $
-          go (midx + 1, yt,       xr,   midy) b $
-          go (xl,       midy + 1, midx, yb)   c $
-          go (midx + 1, midy + 1, xr,   yb)   d z
+        go (xl, yt, xr, yb) (Node a b c d) =
+          go (xl,       yt,       midx, midy) a .
+          go (midx + 1, yt,       xr,   midy) b .
+          go (xl,       midy + 1, midx, yb)   c .
+          go (midx + 1, midy + 1, xr,   yb)   d
           where midx = (xr + xl) `div` 2
                 midy = (yt + yb) `div` 2
 
