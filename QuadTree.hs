@@ -6,6 +6,8 @@
 module QuadTree ( makeZone
                 , atLocation
                 , outOfBounds, fuseZone
+                , expand, tile, foldTiles
+                , filterZone, sortZoneBy, filterTiles, sortTilesBy
                 , showZone, printZone ) where
 
 import Control.Lens.Type (Lens')
@@ -13,6 +15,8 @@ import Control.Lens.Lens (lens)
 
 import Data.List (find)
 import Data.Maybe (fromJust)
+import Data.List (sortBy)
+import Data.Function (on)
 
 -- Foldable:
 
@@ -156,17 +160,21 @@ fuseTree leaf           = leaf
 
 --   Region = (floorX, floorY, ceilX, ceilY)
 type Region = (Int,    Int,    Int,   Int)
+type Tile a = (a, Region)
 
-foldZone :: forall a b. (a -> b -> b) -> b -> QuadZone a -> b
-foldZone fn z = foldr fn z . concatMap expand . regionList
-  where expand :: (a, Region) -> [a]
-        expand (a, r) = replicate (regionArea r) a
+foldZone :: (a -> b -> b) -> b -> QuadZone a -> b
+foldZone fn z = foldr fn z . expand . tile
 
-regionList :: QuadZone a -> [(a, Region)]
-regionList = foldRegions (:) []
+expand :: [Tile a] -> [a]
+expand = concatMap decompose
+  where decompose :: Tile a -> [a]
+        decompose (a, r) = replicate (regionArea r) a
 
-foldRegions :: forall a b. ((a, Region) -> b -> b) -> b -> QuadZone a -> b
-foldRegions fn z zone = go (zoneRegion zone) (wrappedTree zone) z
+tile :: QuadZone a -> [Tile a]
+tile = foldTiles (:) []
+
+foldTiles :: forall a b. (Tile a -> b -> b) -> b -> QuadZone a -> b
+foldTiles fn z zone = go (zoneRegion zone) (wrappedTree zone) z
   where go :: Region -> QuadTree a -> b -> b
         go r (Leaf a) = fn (a, intersection)
           where intersection = regionIntersection (boundaries zone) r
@@ -196,6 +204,23 @@ regionIntersection (xl , yt , xr , yb )
 
 regionArea :: Region -> Int
 regionArea (xl,yt,xr,yb) = (xr + 1 - xl) * (yb + 1 - yt)
+
+---- Foldable extras:
+
+filterZone :: (a -> Bool) -> QuadZone a -> [a]
+filterZone fn = expand . filterTiles fn . tile
+
+sortZoneBy :: (a -> a -> Ordering) -> QuadZone a -> [a]
+sortZoneBy fn = expand . sortTilesBy fn . tile
+
+filterTiles :: (a -> Bool) -> [Tile a] -> [Tile a]
+filterTiles _  [] = []
+filterTiles fn ((a,r) : rs)
+  | fn a      = (a,r) : filterTiles fn rs
+  | otherwise =         filterTiles fn rs
+
+sortTilesBy :: (a -> a -> Ordering) -> [Tile a] -> [Tile a]
+sortTilesBy fn = sortBy (fn `on` fst)
 
 ---- Constructor:
 
