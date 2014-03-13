@@ -1,3 +1,5 @@
+{-# LANGUAGE Safe #-}
+
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -6,7 +8,8 @@ module QuadTree ( makeZone
                 , outOfBounds, fuseZone
                 , showZone, printZone ) where
 
-import Control.Lens (Lens', lens)
+import Control.Lens.Type (Lens')
+import Control.Lens.Lens (lens)
 
 import Data.List (find)
 import Data.Maybe (fromJust)
