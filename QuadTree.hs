@@ -13,9 +13,8 @@ module QuadTree ( makeZone
 import Control.Lens.Type (Lens')
 import Control.Lens.Lens (lens)
 
-import Data.List (find)
+import Data.List (find, sortBy)
 import Data.Maybe (fromJust)
-import Data.List (sortBy)
 import Data.Function (on)
 
 -- Foldable:
@@ -231,7 +230,7 @@ makeZone (x,y) a
                         , zoneLength = x
                         , zoneWidth  = y
                         , zoneDepth = fst . fromJust $
-                            find ((>= (max x y)) . snd) $
+                            find ((>= max x y) . snd) $
                               zip [0..] (iterate (*2) 1) }
 
 
