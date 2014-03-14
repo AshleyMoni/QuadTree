@@ -12,6 +12,7 @@ module QuadTree ( makeZone
 
 import Control.Lens.Type (Lens')
 import Control.Lens.Lens (lens)
+-- import Control.Lens.Setter (set)
 
 import Data.List (find, sortBy)
 import Data.Maybe (fromJust)
@@ -85,8 +86,7 @@ setLocation index zone new
   | outOfBounds zone index =
       error "Location index out of QuadZone bounds."
   | otherwise =
-      zone {wrappedTree = go (offsetIndex zone index)
-                             (zoneDepth zone) (wrappedTree zone)}
+      onTree (go (offsetIndex zone index) (zoneDepth zone)) zone
   where
     go :: Eq a => Location -> Int -> QuadTree a -> QuadTree a
     go (x,y) n (Leaf old)
