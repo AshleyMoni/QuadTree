@@ -241,20 +241,20 @@ printZone = putStr .: showZone
 
 --------- Test:
 
-x' :: QuadZone Int
-x' = Wrapper { zoneLength = 6
-            , zoneWidth = 5
-            , zoneDepth = 3
-            , wrappedTree = y' }
+-- x' :: QuadZone Int
+-- x' = Wrapper { zoneLength = 6
+--             , zoneWidth = 5
+--             , zoneDepth = 3
+--             , wrappedTree = y' }
 
-y' :: QuadTree Int
-y' = Node (Leaf 0)
-          (Node (Leaf 2)
-                (Leaf 3)
-                (Leaf 4)
-                (Leaf 5))
-          (Leaf 1)
-          (Leaf 9)
+-- y' :: QuadTree Int
+-- y' = Node (Leaf 0)
+--           (Node (Leaf 2)
+--                 (Leaf 3)
+--                 (Leaf 4)
+--                 (Leaf 5))
+--           (Leaf 1)
+--           (Leaf 9)
 
 -- basic :: QuadZone Int
 -- basic = Wrapper {zoneLength = 4, zoneWidth = 5, zoneDepth = 3,
@@ -265,7 +265,7 @@ y' = Node (Leaf 0)
 
 -- -- x5 = set (atLocation (2,3)) 1 (makeZone (5,7) 0)
 -- -- x6 = set (atLocation (2,3)) 1 (makeZone (6,7) 0)
-p n = printZone (head . show) n
+-- p n = printZone (head . show) n
 
 -- x1 = set (atLocation (5,5)) 5 $
 --      set (atLocation (3,2)) 2 $
