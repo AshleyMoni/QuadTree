@@ -33,7 +33,7 @@ data QuadZone a = Wrapper { wrappedTree :: QuadTree a
                           , zoneLength :: Int
                           , zoneWidth  :: Int
                           , zoneDepth :: Int }
-  deriving (Show)
+  deriving (Show, Read)
 
 instance Functor QuadZone where
   fmap fn = onTree $ fmap fn
@@ -48,7 +48,7 @@ data QuadTree a = Leaf a
                        (QuadTree a)
                        (QuadTree a)
                        (QuadTree a)
-  deriving (Show)
+  deriving (Show, Read)
 
 instance Functor QuadTree where
   fmap fn (Leaf x)       = Leaf (fn x)
