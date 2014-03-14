@@ -33,18 +33,13 @@ data QuadZone a = Wrapper { wrappedTree :: QuadTree a
                           , zoneLength :: Int
                           , zoneWidth  :: Int
                           , zoneDepth :: Int }
+  deriving (Show)
 
 instance Functor QuadZone where
   fmap fn = onTree $ fmap fn
 
 instance Foldable QuadZone where
   foldr = foldZone
-
-instance Show a => Show (QuadZone a) where
-  show zone = "Wrapper { zoneLength = " ++ show (zoneLength zone) ++
-                       ", zoneWidth = " ++ show (zoneWidth   zone) ++
-                       ", zoneDepth = " ++ show (zoneDepth  zone) ++
-                     ", wrappedTree = " ++ show (wrappedTree zone) ++ "}"
 
 --
 
@@ -53,6 +48,7 @@ data QuadTree a = Leaf a
                        (QuadTree a)
                        (QuadTree a)
                        (QuadTree a)
+  deriving (Show)
 
 instance Functor QuadTree where
   fmap fn (Leaf x)       = Leaf (fn x)
@@ -60,13 +56,6 @@ instance Functor QuadTree where
                                 (fmap fn b)
                                 (fmap fn c)
                                 (fmap fn d)
-
-instance Show a => Show (QuadTree a) where
-  show (Leaf x)       = "(Leaf " ++ show x ++ ")"
-  show (Node a b c d) = "(Node " ++ show a ++
-                             " " ++ show b ++
-                             " " ++ show c ++
-                             " " ++ show d ++ ")"
 
 ---- Lens:
 
@@ -252,20 +241,20 @@ printZone = putStr .: showZone
 
 --------- Test:
 
--- x' :: QuadZone Int
--- x' = Wrapper { zoneLength = 6
---             , zoneWidth = 5
---             , zoneDepth = 3
---             , wrappedTree = y' }
+x' :: QuadZone Int
+x' = Wrapper { zoneLength = 6
+            , zoneWidth = 5
+            , zoneDepth = 3
+            , wrappedTree = y' }
 
--- y' :: QuadTree Int
--- y' = Node (Leaf 0)
---           (Node (Leaf 2)
---                 (Leaf 3)
---                 (Leaf 4)
---                 (Leaf 5))
---           (Leaf 1)
---           (Leaf 9)
+y' :: QuadTree Int
+y' = Node (Leaf 0)
+          (Node (Leaf 2)
+                (Leaf 3)
+                (Leaf 4)
+                (Leaf 5))
+          (Leaf 1)
+          (Leaf 9)
 
 -- basic :: QuadZone Int
 -- basic = Wrapper {zoneLength = 4, zoneWidth = 5, zoneDepth = 3,
@@ -276,7 +265,7 @@ printZone = putStr .: showZone
 
 -- -- x5 = set (atLocation (2,3)) 1 (makeZone (5,7) 0)
 -- -- x6 = set (atLocation (2,3)) 1 (makeZone (6,7) 0)
--- p n = printZone (head . show) n
+p n = printZone (head . show) n
 
 -- x1 = set (atLocation (5,5)) 5 $
 --      set (atLocation (3,2)) 2 $
