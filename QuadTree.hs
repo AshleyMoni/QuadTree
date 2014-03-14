@@ -16,6 +16,7 @@ import Control.Lens.Lens (lens)
 import Data.List (find, sortBy)
 import Data.Maybe (fromJust)
 import Data.Function (on)
+import Data.Composition ((.:))
 
 -- Foldable:
 
@@ -40,11 +41,10 @@ instance Foldable QuadZone where
   foldr = foldZone
 
 instance Show a => Show (QuadZone a) where
-  show zone = "<" ++ dimensions ++
-              ":" ++ show (wrappedTree zone) ++ ">"
-    where dimensions = show l ++ "x" ++ show w
-          l = zoneLength zone
-          w = zoneWidth  zone
+  show zone = "Wrapper { zoneLength = " ++ show (zoneLength zone) ++
+                       ", zoneWidth = " ++ show (zoneWidth   zone) ++
+                       ", zoneDepth = " ++ show (zoneDepth  zone) ++
+                     ", wrappedTree = " ++ show (wrappedTree zone) ++ "}"
 
 --
 
@@ -62,11 +62,11 @@ instance Functor QuadTree where
                                 (fmap fn d)
 
 instance Show a => Show (QuadTree a) where
-  show (Leaf x)       = show x
-  show (Node a b c d) = "{a=" ++ show a ++
-                        " b=" ++ show b ++
-                        " c=" ++ show c ++
-                        " d=" ++ show d ++ "}"
+  show (Leaf x)       = "(Leaf " ++ show x ++ ")"
+  show (Node a b c d) = "(Node " ++ show a ++
+                             " " ++ show b ++
+                             " " ++ show c ++
+                             " " ++ show d ++ ")"
 
 ---- Lens:
 
@@ -86,11 +86,10 @@ getLocation index zone
     go (x,y) n (Node a b c d) =
       go (x `mod` mid, y `mod` mid) (n - 1) node
       where mid = 2 ^ (n - 1)
-            node
-              | y < mid   = if x < mid then a
-                                       else b
-              | otherwise = if x < mid then c
-                                       else d
+            node | y < mid   = if x < mid then a
+                                          else b
+                 | otherwise = if x < mid then c
+                                          else d
 
 setLocation :: forall a. Eq a => Location -> QuadZone a -> a -> QuadZone a
 setLocation index zone new
@@ -103,7 +102,7 @@ setLocation index zone new
     go :: Eq a => Location -> Int -> QuadTree a -> QuadTree a
     go (x,y) n (Leaf old)
       | old == new  = Leaf old
-      | n == 0      = Leaf new
+      |   n == 0    = Leaf new
       | otherwise   = go (x,y) n (Node l l l l)
       where l = Leaf old
     go _     0 _    = error "Wrapped tree is deeper than zone depth."
@@ -126,9 +125,9 @@ outOfBounds zone (x,y) = x < 0 || y < 0
 
 offsetIndex :: QuadZone a -> Location -> Location
 offsetIndex zone (x,y) = (x + xOffset, y + yOffset)
-  where dimension = 2 ^ zoneDepth zone
-        xOffset = (dimension - zoneLength zone) `div` 2
+  where xOffset = (dimension - zoneLength zone) `div` 2
         yOffset = (dimension - zoneWidth  zone) `div` 2
+        dimension = 2 ^ zoneDepth zone
 
 fuse :: Eq a => QuadTree a -> QuadTree a
 fuse (Node (Leaf a) (Leaf b) (Leaf c) (Leaf d))
@@ -142,8 +141,8 @@ onTree fn zone = zone {wrappedTree = fn (wrappedTree zone)}
 
 {- fuseZone is an exported helper function for treating QuadZones as
    functors. It won't properly garbage collect equivalent nodes under
-   a simple fmap, so a cleanup function is needed to compress it
-   back down to its proper size. -}
+   a simple fmap, so a cleanup function is needed to compress it back
+   down to its proper size. -}
 
 fuseZone :: Eq a => QuadZone a -> QuadZone a
 fuseZone = onTree fuseTree
@@ -240,15 +239,15 @@ showZone :: (a -> Char) -> QuadZone a -> String
 showZone printer zone = breakString (zoneLength zone) string
   where string   = map printer grid
         grid = [getLocation (x,y) zone |
-                y <- [0 .. pred $ zoneWidth  zone],
-                x <- [0 .. pred $ zoneLength zone]]
+                y <- [0 .. zoneWidth  zone - 1],
+                x <- [0 .. zoneLength zone - 1]]
         breakString :: Int -> String -> String
         breakString _ [] = []
         breakString n xs = a ++ "\n" ++ breakString n b
           where (a,b) = splitAt n xs
 
 printZone :: (a -> Char) -> QuadZone a -> IO ()
-printZone = ((.).(.)) putStr showZone
+printZone = putStr .: showZone
 
 
 --------- Test:
@@ -275,8 +274,8 @@ printZone = ((.).(.)) putStr showZone
 --                                     (Leaf 2)
 --                                     (Leaf 3)}
 
--- x5 = set (atLocation (2,3)) 1 (makeZone (5,7) 0)
--- x6 = set (atLocation (2,3)) 1 (makeZone (6,7) 0)
+-- -- x5 = set (atLocation (2,3)) 1 (makeZone (5,7) 0)
+-- -- x6 = set (atLocation (2,3)) 1 (makeZone (6,7) 0)
 -- p n = printZone (head . show) n
 
 -- x1 = set (atLocation (5,5)) 5 $
