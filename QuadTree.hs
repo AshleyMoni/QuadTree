@@ -3,12 +3,12 @@
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module QuadTree ( makeZone
+module QuadTree ( QuadTree, makeTree
                 , atLocation
-                , outOfBounds, fuseZone
+                , outOfBounds, fuseTree
                 , expand, tile, foldTiles
-                , filterZone, sortZoneBy, filterTiles, sortTilesBy
-                , showZone, printZone ) where
+                , filterTree, sortTreeBy, filterTiles, sortTilesBy
+                , showTree, printTree ) where
 
 import Control.Lens.Type (Lens')
 import Control.Lens.Lens (lens)
@@ -30,28 +30,28 @@ type Location = (Int, Int)
 
 --
 
-data QuadZone a = Wrapper { wrappedTree :: QuadTree a
+data QuadTree a = Wrapper { wrappedQuad :: Quadrant a
                           , zoneLength :: Int
                           , zoneWidth  :: Int
                           , zoneDepth :: Int }
   deriving (Show, Read)
 
-instance Functor QuadZone where
-  fmap fn = onTree $ fmap fn
+instance Functor QuadTree where
+  fmap fn = onQuads $ fmap fn
 
-instance Foldable QuadZone where
-  foldr = foldZone
+instance Foldable QuadTree where
+  foldr = foldTree
 
 --
 
-data QuadTree a = Leaf a
-                | Node (QuadTree a)
-                       (QuadTree a)
-                       (QuadTree a)
-                       (QuadTree a)
+data Quadrant a = Leaf a
+                | Node (Quadrant a)
+                       (Quadrant a)
+                       (Quadrant a)
+                       (Quadrant a)
   deriving (Show, Read)
 
-instance Functor QuadTree where
+instance Functor Quadrant where
   fmap fn (Leaf x)       = Leaf (fn x)
   fmap fn (Node a b c d) = Node (fmap fn a)
                                 (fmap fn b)
@@ -60,17 +60,17 @@ instance Functor QuadTree where
 
 ---- Lens:
 
-atLocation :: Eq a => Location -> Lens' (QuadZone a) a
+atLocation :: Eq a => Location -> Lens' (QuadTree a) a
 atLocation index = lens (getLocation index) (setLocation index)
 
-getLocation :: Location -> QuadZone a -> a
+getLocation :: Location -> QuadTree a -> a
 getLocation index zone
   | outOfBounds zone index =
-      error "Location index out of QuadZone bounds."
+      error "Location index out of QuadTree bounds."
   | otherwise =
-      go (offsetIndex zone index) (zoneDepth zone) (wrappedTree zone)
+      go (offsetIndex zone index) (zoneDepth zone) (wrappedQuad zone)
   where
-    go :: Location -> Int -> QuadTree a -> a
+    go :: Location -> Int -> Quadrant a -> a
     go _ _ (Leaf x) = x
     go _ 0 _        = error "Wrapped tree is deeper than zone depth."
     go (x,y) n (Node a b c d) =
@@ -81,14 +81,14 @@ getLocation index zone
                  | otherwise = if x < mid then c
                                           else d
 
-setLocation :: forall a. Eq a => Location -> QuadZone a -> a -> QuadZone a
+setLocation :: forall a. Eq a => Location -> QuadTree a -> a -> QuadTree a
 setLocation index zone new
   | outOfBounds zone index =
-      error "Location index out of QuadZone bounds."
+      error "Location index out of QuadTree bounds."
   | otherwise =
-      onTree (go (offsetIndex zone index) (zoneDepth zone)) zone
+      onQuads (go (offsetIndex zone index) (zoneDepth zone)) zone
   where
-    go :: Eq a => Location -> Int -> QuadTree a -> QuadTree a
+    go :: Eq a => Location -> Int -> Quadrant a -> Quadrant a
     go (x,y) n (Leaf old)
       | old == new  = Leaf old
       |   n == 0    = Leaf new
@@ -107,41 +107,41 @@ setLocation index zone new
 
 ---- Helpers:
 
-outOfBounds :: QuadZone a -> Location -> Bool
+outOfBounds :: QuadTree a -> Location -> Bool
 outOfBounds zone (x,y) = x < 0 || y < 0
                          || x >= zoneLength zone
                          || y >= zoneWidth  zone
 
-offsetIndex :: QuadZone a -> Location -> Location
+offsetIndex :: QuadTree a -> Location -> Location
 offsetIndex zone (x,y) = (x + xOffset, y + yOffset)
   where xOffset = (dimension - zoneLength zone) `div` 2
         yOffset = (dimension - zoneWidth  zone) `div` 2
         dimension = 2 ^ zoneDepth zone
 
-fuse :: Eq a => QuadTree a -> QuadTree a
+fuse :: Eq a => Quadrant a -> Quadrant a
 fuse (Node (Leaf a) (Leaf b) (Leaf c) (Leaf d))
   | a == b && b == c && c == d = Leaf a
 fuse oldNode                   = oldNode
 
 ---- Functor:
 
-onTree :: (QuadTree a -> QuadTree b) -> QuadZone a -> QuadZone b
-onTree fn zone = zone {wrappedTree = fn (wrappedTree zone)}
+onQuads :: (Quadrant a -> Quadrant b) -> QuadTree a -> QuadTree b
+onQuads fn zone = zone {wrappedQuad = fn (wrappedQuad zone)}
 
-{- fuseZone is an exported helper function for treating QuadZones as
+{- fuseTree is an exported helper function for treating QuadTrees as
    functors. It won't properly garbage collect equivalent nodes under
    a simple fmap, so a cleanup function is needed to compress it back
    down to its proper size. -}
 
-fuseZone :: Eq a => QuadZone a -> QuadZone a
-fuseZone = onTree fuseTree
-
 fuseTree :: Eq a => QuadTree a -> QuadTree a
-fuseTree (Node a b c d) = fuse $ Node (fuseTree a)
-                                      (fuseTree b)
-                                      (fuseTree c)
-                                      (fuseTree d)
-fuseTree leaf           = leaf
+fuseTree = onQuads fuseQuad
+
+fuseQuad :: Eq a => Quadrant a -> Quadrant a
+fuseQuad (Node a b c d) = fuse $ Node (fuseQuad a)
+                                      (fuseQuad b)
+                                      (fuseQuad c)
+                                      (fuseQuad d)
+fuseQuad leaf           = leaf
 
 ---- Foldable:
 
@@ -149,20 +149,20 @@ fuseTree leaf           = leaf
 type Region = (Int,    Int,    Int,   Int)
 type Tile a = (a, Region)
 
-foldZone :: (a -> b -> b) -> b -> QuadZone a -> b
-foldZone fn z = foldr fn z . expand . tile
+foldTree :: (a -> b -> b) -> b -> QuadTree a -> b
+foldTree fn z = foldr fn z . expand . tile
 
 expand :: [Tile a] -> [a]
 expand = concatMap decompose
   where decompose :: Tile a -> [a]
         decompose (a, r) = replicate (regionArea r) a
 
-tile :: QuadZone a -> [Tile a]
+tile :: QuadTree a -> [Tile a]
 tile = foldTiles (:) []
 
-foldTiles :: forall a b. (Tile a -> b -> b) -> b -> QuadZone a -> b
-foldTiles fn z zone = go (zoneRegion zone) (wrappedTree zone) z
-  where go :: Region -> QuadTree a -> b -> b
+foldTiles :: forall a b. (Tile a -> b -> b) -> b -> QuadTree a -> b
+foldTiles fn z zone = go (zoneRegion zone) (wrappedQuad zone) z
+  where go :: Region -> Quadrant a -> b -> b
         go r (Leaf a) = fn (a, intersection)
           where intersection = regionIntersection (boundaries zone) r
         go (xl, yt, xr, yb) (Node a b c d) =
@@ -173,11 +173,11 @@ foldTiles fn z zone = go (zoneRegion zone) (wrappedTree zone) z
           where midx = (xr + xl) `div` 2
                 midy = (yt + yb) `div` 2
 
-zoneRegion :: QuadZone a -> Region
+zoneRegion :: QuadTree a -> Region
 zoneRegion zone = (0, 0, limit, limit)
   where limit = (2 ^ zoneDepth zone) - 1
 
-boundaries :: QuadZone a -> Region
+boundaries :: QuadTree a -> Region
 boundaries zone = (left, top, right, bottom)
   where (left,  top)    = offsetIndex zone (0,0)
         (right, bottom) = offsetIndex zone (zoneLength zone - 1,
@@ -194,11 +194,11 @@ regionArea (xl,yt,xr,yb) = (xr + 1 - xl) * (yb + 1 - yt)
 
 ---- Foldable extras:
 
-filterZone :: (a -> Bool) -> QuadZone a -> [a]
-filterZone fn = expand . filterTiles fn . tile
+filterTree :: (a -> Bool) -> QuadTree a -> [a]
+filterTree fn = expand . filterTiles fn . tile
 
-sortZoneBy :: (a -> a -> Ordering) -> QuadZone a -> [a]
-sortZoneBy fn = expand . sortTilesBy fn . tile
+sortTreeBy :: (a -> a -> Ordering) -> QuadTree a -> [a]
+sortTreeBy fn = expand . sortTilesBy fn . tile
 
 filterTiles :: (a -> Bool) -> [Tile a] -> [Tile a]
 filterTiles _  [] = []
@@ -211,10 +211,10 @@ sortTilesBy fn = sortBy (fn `on` fst)
 
 ---- Constructor:
 
-makeZone :: (Int, Int) -> a -> QuadZone a
-makeZone (x,y) a
+makeTree :: (Int, Int) -> a -> QuadTree a
+makeTree (x,y) a
   | x <= 0 || y <= 0 = error "Invalid dimensions for zone."
-  | otherwise = Wrapper { wrappedTree = Leaf a
+  | otherwise = Wrapper { wrappedQuad = Leaf a
                         , zoneLength = x
                         , zoneWidth  = y
                         , zoneDepth = fst . fromJust $
@@ -224,8 +224,8 @@ makeZone (x,y) a
 
 ---- Sample Printers:
 
-showZone :: (a -> Char) -> QuadZone a -> String
-showZone printer zone = breakString (zoneLength zone) string
+showTree :: (a -> Char) -> QuadTree a -> String
+showTree printer zone = breakString (zoneLength zone) string
   where string   = map printer grid
         grid = [getLocation (x,y) zone |
                 y <- [0 .. zoneWidth  zone - 1],
@@ -235,19 +235,19 @@ showZone printer zone = breakString (zoneLength zone) string
         breakString n xs = a ++ "\n" ++ breakString n b
           where (a,b) = splitAt n xs
 
-printZone :: (a -> Char) -> QuadZone a -> IO ()
-printZone = putStr .: showZone
+printTree :: (a -> Char) -> QuadTree a -> IO ()
+printTree = putStr .: showTree
 
 
 --------- Test:
 
--- x' :: QuadZone Int
+-- x' :: QuadTree Int
 -- x' = Wrapper { zoneLength = 6
 --             , zoneWidth = 5
 --             , zoneDepth = 3
---             , wrappedTree = y' }
+--             , wrappedQuad = y' }
 
--- y' :: QuadTree Int
+-- y' :: Quadrant Int
 -- y' = Node (Leaf 0)
 --           (Node (Leaf 2)
 --                 (Leaf 3)
@@ -256,18 +256,18 @@ printZone = putStr .: showZone
 --           (Leaf 1)
 --           (Leaf 9)
 
--- basic :: QuadZone Int
+-- basic :: QuadTree Int
 -- basic = Wrapper {zoneLength = 4, zoneWidth = 5, zoneDepth = 3,
---                  wrappedTree = Node (Leaf 0)
+--                  wrappedQuad = Node (Leaf 0)
 --                                     (Leaf 1)
 --                                     (Leaf 2)
 --                                     (Leaf 3)}
 
--- -- x5 = set (atLocation (2,3)) 1 (makeZone (5,7) 0)
--- -- x6 = set (atLocation (2,3)) 1 (makeZone (6,7) 0)
--- p n = printZone (head . show) n
+-- -- x5 = set (atLocation (2,3)) 1 (makeTree (5,7) 0)
+-- -- x6 = set (atLocation (2,3)) 1 (makeTree (6,7) 0)
+-- p n = printTree (head . show) n
 
 -- x1 = set (atLocation (5,5)) 5 $
 --      set (atLocation (3,2)) 2 $
 --      set (atLocation (2,4)) 1 $
---      (makeZone (6,6) 0)
+--      (makeTree (6,6) 0)
