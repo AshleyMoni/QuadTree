@@ -84,7 +84,8 @@ cabal configure \
 cabal haddock \
 	--builddir="${tmpdir}/dist" \
 	--html-location='/package/$pkg-$version/docs' \
-	--haddock-option='--built-in-themes' \
+	--haddock-options='--built-in-themes' \
+	--hoogle --html \
 	"${CUSTOM_OPTIONS[@]}" \
 	--contents-location='/package/$pkg-$version' \
 	--hyperlink-source
