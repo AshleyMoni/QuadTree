@@ -53,7 +53,7 @@ module QuadTree (
 
 import Control.Lens.Type (Lens')
 import Control.Lens.Lens (lens)
-import Control.Lens.Setter (set)
+-- import Control.Lens.Setter (set)
 
 import Data.List (find, sortBy)
 import Data.Maybe (fromJust)
