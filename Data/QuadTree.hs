@@ -35,7 +35,7 @@ d.....
 .....c
 -}
 
-module QuadTree (
+module Data.QuadTree (
   -- * Data Type & Constructor
   QuadTree, makeTree,
   -- * Lens
@@ -184,19 +184,19 @@ fuse oldNode                   = oldNode
 onQuads :: (Quadrant a -> Quadrant b) -> QuadTree a -> QuadTree b
 onQuads fn tree = tree {wrappedQuad = fn (wrappedQuad tree)}
 
--- |Cleanup function for use after any 'Prelude.fmap'.
+-- |Cleanup function for use after any 'Control.Monad.fmap'.
 --
 -- When elements of a 'QuadTree' are modified by the 'atLocation'
 -- lens, it automatically compresses identical adjacent nodes into
 -- larger ones. This keeps the 'QuadTree' from bloating over constant
 -- use.
 --
--- 'Prelude.fmap' does not do this. If you wish to treat the
--- 'QuadTree' as a 'Prelude.Functor', you should compose this function
+-- 'Control.Monad.fmap' does not do this. If you wish to treat the
+-- 'QuadTree' as a 'Control.Monad.Functor', you should compose this function
 -- after to collapse it down to its minimum size.
 --
 -- @
--- 'fuseTree' . 'Prelude.fmap' fn tree
+-- 'fuseTree' . 'Control.Monad.fmap' fn tree
 -- @
 fuseTree :: Eq a => QuadTree a -> QuadTree a
 fuseTree = onQuads fuseQuads
@@ -331,7 +331,7 @@ makeTree (x,y) a
 -- a 2D block of characters.
 --
 -- Note that despite the word 'show' in the function name, this does
--- not 'Prelude.show' the 'QuadTree'. It pretty prints it. The name
+-- not 'Text.show' the 'QuadTree'. It pretty prints it. The name
 -- is simply a mnemonic for its @'QuadTree' -> String@ behaviour.
 showTree :: (a -> Char) -- ^ Function to generate characters for each
                         -- 'QuadTree' element.
