@@ -229,7 +229,7 @@ fuseQuads leaf           = leaf
 -- The co-ordinates are inclusive of all the rows and columns in all
 -- four Ints.
 --
--- prop> regionArea (n, n, n, n) == 1
+-- prop> regionArea (x, y, x, y) == 1
 type Region = (Int, Int, Int, Int)
 
 -- |Each 'Tile' is a tuple of an element from a 'QuadTree' and the
