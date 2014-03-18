@@ -331,9 +331,8 @@ foldTiles fn z tree = go (treeRegion tree) (wrappedTree tree) z
           where normalizedIntersection =
                   (interXl - xOffset, interYt - yOffset,
                    interXr - xOffset, interYb - yOffset)
-                (xOffset, yOffset)     = offsets tree
                 (interXl, interYt, interXr, interYb) = 
-                  regionIntersection (boundaries tree) r
+                  treeIntersection r
         go (xl, yt, xr, yb) (Node a b c d) =
           go (xl,       yt,       midx, midy) a .
           go (midx + 1, yt,       xr,   midy) b .
@@ -341,6 +340,9 @@ foldTiles fn z tree = go (treeRegion tree) (wrappedTree tree) z
           go (midx + 1, midy + 1, xr,   yb)   d
           where midx = (xr + xl) `div` 2
                 midy = (yt + yb) `div` 2
+
+        (xOffset, yOffset) = offsets tree
+        treeIntersection   = regionIntersection $ boundaries tree
 
 treeRegion :: QuadTree a -> Region
 treeRegion tree = (0, 0, limit, limit)
