@@ -1,4 +1,3 @@
-
 {-# OPTIONS_HADDOCK show-extensions #-}
 
 {-# LANGUAGE Safe #-}
@@ -61,7 +60,7 @@ module Data.QuadTree (
 
 import Control.Lens.Type (Lens')
 import Control.Lens.Lens (lens)
-import Control.Lens.Setter (set)
+-- import Control.Lens.Setter (set)
 
 import Data.List (find, sortBy)
 import Data.Maybe (fromJust)
@@ -447,34 +446,34 @@ printTree = putStr .: showTree
 
 --------- Test:
 
-x' :: QuadTree Int
-x' = Wrapper { treeLength = 6
-            , treeWidth = 5
-            , treeDepth = 3
-            , wrappedTree = y' }
+-- x' :: QuadTree Int
+-- x' = Wrapper { treeLength = 6
+--             , treeWidth = 5
+--             , treeDepth = 3
+--             , wrappedTree = y' }
 
-y' :: Quadrant Int
-y' = Node (Leaf 0)
-          (Node (Leaf 2)
-                (Leaf 3)
-                (Leaf 4)
-                (Leaf 5))
-          (Leaf 1)
-          (Leaf 9)
+-- y' :: Quadrant Int
+-- y' = Node (Leaf 0)
+--           (Node (Leaf 2)
+--                 (Leaf 3)
+--                 (Leaf 4)
+--                 (Leaf 5))
+--           (Leaf 1)
+--           (Leaf 9)
 
-basic :: QuadTree Int
-basic = Wrapper {treeLength = 4, treeWidth = 5, treeDepth = 3,
-                 wrappedTree = Node (Leaf 0)
-                                    (Leaf 1)
-                                    (Leaf 2)
-                                    (Leaf 3)}
+-- basic :: QuadTree Int
+-- basic = Wrapper {treeLength = 4, treeWidth = 5, treeDepth = 3,
+--                  wrappedTree = Node (Leaf 0)
+--                                     (Leaf 1)
+--                                     (Leaf 2)
+--                                     (Leaf 3)}
 
-x5 = set (atLocation (2,3)) 1 (makeTree (5,7) 0)
-x6 = set (atLocation (2,3)) 1 (makeTree (6,7) 0)
-p n = printTree (head . show) n
+-- x5 = set (atLocation (2,3)) 1 (makeTree (5,7) 0)
+-- x6 = set (atLocation (2,3)) 1 (makeTree (6,7) 0)
+-- p n = printTree (head . show) n
 
-test = set (atLocation (0,0)) 'd' $
-       set (atLocation (5,5)) 'c' $
-       set (atLocation (3,2)) 'b' $
-       set (atLocation (2,4)) 'a' $
-       makeTree (6,6) '.'
+-- test = set (atLocation (0,0)) 'd' $
+--        set (atLocation (5,5)) 'c' $
+--        set (atLocation (3,2)) 'b' $
+--        set (atLocation (2,4)) 'a' $
+--        makeTree (6,6) '.'
