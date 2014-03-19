@@ -53,3 +53,7 @@ library
   -- Other library packages from which modules are imported.
   build-depends:       base ==4.6.*, lens ==4.0.*, composition ==1.0.*
   
+
+source-repository head
+  type: git
+  location: git@github.com:AshleyMoni/QuadTree.git
