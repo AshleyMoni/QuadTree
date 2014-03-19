@@ -14,10 +14,10 @@
   (major1) == 1 && (major2) <  0 || \
   (major1) == 1 && (major2) == 0 && (minor) <= 1)
 
-/* package lens-4.0 */
-#define VERSION_lens "4.0"
+/* package lens-4.0.5 */
+#define VERSION_lens "4.0.5"
 #define MIN_VERSION_lens(major1,major2,minor) (\
   (major1) <  4 || \
   (major1) == 4 && (major2) <  0 || \
-  (major1) == 4 && (major2) == 0 && (minor) <= 0)
+  (major1) == 4 && (major2) == 0 && (minor) <= 5)
 
