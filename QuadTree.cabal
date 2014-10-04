@@ -10,7 +10,7 @@ name:                QuadTree
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             0.10.0
+version:             0.10.1
 
 -- A short (one-line) description of the package.
 synopsis:            QuadTree library for Haskell, with lens support.
@@ -35,7 +35,7 @@ maintainer:          ashley.moni1@gmail.com
 -- A copyright notice.
 -- copyright:
 
-category:            Data
+category:            Data, Game
 
 build-type:          Simple
 

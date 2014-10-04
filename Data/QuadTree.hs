@@ -7,12 +7,11 @@
 
 {-|
 Module      : QuadTree
-Description : Region quadtrees with Lens support.
+Description : Region quadtrees with lens support.
 Copyright   : (c) Ashley Moni, 2014
 License     : GPL-3
-Maintainer  : Ashley Moni <y30099923@gmail.com>
-Stability   : Experimental
-Portability : Rank 2 Types, Scoped Type Variables
+Maintainer  : Ashley Moni <ashley.moni1@gmail.com>
+Stability   : Stable
 
 The purpose of this module is to provide discrete region quadtrees
 that can be used as simple functional alternatives to 2D arrays,
