@@ -255,7 +255,7 @@ tmap = fuseTree .: fmap
 -- import "Prelude" hiding (foldr, foldl, any, sum, find...)
 -- @
 --
--- ... Then you can directly call then on 'QuadTree's without
+-- ... Then you can directly call them on 'QuadTree's without
 -- qualification. No list functionality will be lost since the
 -- "Data.Foldable" functions also work exactly like the "Prelude"
 -- folds for list processing.
