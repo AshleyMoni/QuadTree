@@ -48,7 +48,7 @@ library
   exposed-modules:     Data.QuadTree
 
   -- Modules included in this library but not exported.
-  -- other-modules:
+  other-modules:       Data.QuadTree.Internal
 
   -- Other library packages from which modules are imported.
   build-depends:       base >= 4.6 && <= 4.8,
