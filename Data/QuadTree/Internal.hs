@@ -11,12 +11,11 @@ module Data.QuadTree.Internal where
 
 import Control.Lens.Type (Lens')
 import Control.Lens.Lens (lens)
--- import Control.Lens.Setter (set)
 
 import Data.List (find, sortBy)
-import Data.Maybe (fromJust)
 import Data.Function (on)
 import Data.Composition ((.:))
+import Control.Applicative ((<*>))
 
 -- Foldable:
 import Data.Foldable (Foldable, foldr)
@@ -145,8 +144,11 @@ offsets tree = (xOffset, yOffset)
 
 fuse :: Eq a => Quadrant a -> Quadrant a
 fuse (Node (Leaf a) (Leaf b) (Leaf c) (Leaf d))
-  | a == b && b == c && c == d = Leaf a
-fuse oldNode                   = oldNode
+  | allEqual [a,b,c,d] = Leaf a
+fuse oldNode            = oldNode
+
+allEqual :: Eq a => [a] -> Bool
+allEqual = and . (zipWith (==) <*> tail)
 
 ---- Functor:
 
@@ -310,10 +312,14 @@ makeTree (x,y) a
   | otherwise = Wrapper { wrappedTree = Leaf a
                         , treeLength = x
                         , treeWidth  = y
-                        , treeDepth = fst . fromJust $
-                            find ((>= max x y) . snd) $
-                              zip [0..] (iterate (*2) 1) }
+                        , treeDepth = smallestDepth (x,y) }
 
+smallestDepth :: (Int, Int) -> Int
+smallestDepth (x,y) = depth
+  where (depth, _)         = smallestPower
+        Just smallestPower = find bigEnough powersZip
+        bigEnough (_, e)   = e >= max x y
+        powersZip          = zip [0..] $ iterate (* 2) 1
 
 ---- Sample Printers:
 
@@ -343,38 +349,3 @@ printTree :: (a -> Char) -- ^ Function to generate characters for each
                          -- 'QuadTree' element.
           -> QuadTree a -> IO ()
 printTree = putStr .: showTree
-
-
---------- Test:
-
--- x' :: QuadTree Int
--- x' = Wrapper { treeLength = 6
---             , treeWidth = 5
---             , treeDepth = 3
---             , wrappedTree = y' }
-
--- y' :: Quadrant Int
--- y' = Node (Leaf 0)
---           (Node (Leaf 2)
---                 (Leaf 3)
---                 (Leaf 4)
---                 (Leaf 5))
---           (Leaf 1)
---           (Leaf 9)
-
--- basic :: QuadTree Int
--- basic = Wrapper {treeLength = 4, treeWidth = 5, treeDepth = 3,
---                  wrappedTree = Node (Leaf 0)
---                                     (Leaf 1)
---                                     (Leaf 2)
---                                     (Leaf 3)}
-
--- x5 = set (atLocation (2,3)) 1 (makeTree (5,7) 0)
--- x6 = set (atLocation (2,3)) 1 (makeTree (6,7) 0)
--- p n = printTree (head . show) n
-
--- test = set (atLocation (0,0)) 'd' $
---        set (atLocation (5,5)) 'c' $
---        set (atLocation (3,2)) 'b' $
---        set (atLocation (2,4)) 'a' $
---        makeTree (6,6) '.'
