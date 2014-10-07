@@ -37,7 +37,7 @@ data QuadTree a = Wrapper { wrappedTree :: Quadrant a
                           , treeLength :: Int
                           , treeWidth  :: Int
                           , treeDepth :: Int }
-  deriving (Show, Read)
+  deriving (Show, Read, Eq)
 
 instance Functor QuadTree where
   fmap fn = onQuads $ fmap fn
@@ -52,7 +52,7 @@ data Quadrant a = Leaf a
                        (Quadrant a)
                        (Quadrant a)
                        (Quadrant a)
-  deriving (Show, Read)
+  deriving (Show, Read, Eq)
 
 instance Functor Quadrant where
   fmap fn (Leaf x)       = Leaf (fn x)

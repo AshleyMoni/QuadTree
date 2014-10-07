@@ -9,10 +9,11 @@ import Data.QuadTree.Internal
 import Test.QuickCheck
 import System.Exit (exitSuccess, exitFailure)
 
-import Control.Lens (set)
+import Control.Lens (Lens', set, view)
 import Control.Monad (replicateM)
 import Data.Functor ((<$>))
 import Control.Applicative ((<*>))
+import Data.Composition ((.:))
 
 {- Structure
 
@@ -53,17 +54,16 @@ instance (Eq a, Arbitrary a) => Arbitrary (APITree a) where
     baseValue <- arbitrary
     let baseTree = makeTree (len, wid) baseValue
 
-    indices <- listOf $ generateIndex baseTree
+    indices <- listOf $ generateIndexOf baseTree
     values <- infiniteListOf arbitrary
     let setList = zip indices values
 
     return . Constructed $ foldr setAt baseTree setList
-
-    where setAt (index, value) = set (atLocation index) value
+      where setAt (index, value) = set (atLocation index) value
 
 -- Generates a random valid location index for a quadtree
-generateIndex :: QuadTree a -> Gen Location
-generateIndex qt = do
+generateIndexOf :: QuadTree a -> Gen Location
+generateIndexOf qt = do
   x <- choose (0, treeLength qt - 1)
   y <- choose (0, treeWidth qt - 1)
   return (x,y)
@@ -97,6 +97,27 @@ generateNode n = do
     where equalLeaves :: Eq a => [Quadrant a] -> Bool
           equalLeaves [Leaf a, Leaf b, Leaf c, Leaf d] = allEqual [a,b,c,d]
           equalLeaves _ = False
+
+
+---- General index generator
+
+-- Ideally, we'd be able to generate random dimensionally valid lenses as
+-- part of the arguments to property functions that take quadtrees.
+-- But we'd need dependent types for that, so we're just going to generate
+-- independent random lenses and only test the ones that would work with
+-- the tree.
+
+newtype Index = MkIndex (Int, Int)
+
+instance Arbitrary Index where
+  arbitrary = do
+    NonNegative x <- arbitrary
+    NonNegative y <- arbitrary
+    return $ MkIndex (x,y)
+
+instance Show Index where
+  show (MkIndex index) = show index
+
 
 ---- APITree structural tests
 
@@ -145,12 +166,33 @@ prop_treeInequality = go . wrappedTree
           | allEqual [a,b,c,d] = False
         go (Node a b c d)      = and $ fmap go [a,b,c,d]
 
-{- Functor Laws:
+{- Lens laws
 
-  fmap id  ==  id
-  fmap (f . g)  ==  fmap f . fmap g -}
+  view l (set l b a)  = b
+  set l (view l a) a  = a
+  set l c (set l b a) = set l c a -}
 
--- prop_fmapIdempotance :: Arbitrary a => 
+prop_lens1 :: Eq a => QuadTree a -> a -> Index -> Property
+prop_lens1 a b (MkIndex location) =
+  location `validIndexOf` a  ==>  view l (set l b a) == b
+  where l :: Eq a => Lens' (QuadTree a) a
+        l = atLocation location
+
+prop_lens2 :: Eq a => QuadTree a -> Index -> Property
+prop_lens2 a (MkIndex location) =
+  location `validIndexOf` a  ==>  set l (view l a) a == a
+  where l :: Eq a => Lens' (QuadTree a) a
+        l = atLocation location
+
+prop_lens3 :: Eq a => QuadTree a -> a -> a -> Index -> Property
+prop_lens3 a b c (MkIndex location) =
+  location `validIndexOf` a  ==>  set l c (set l b a) == set l c a
+  where l :: Eq a => Lens' (QuadTree a) a
+        l = atLocation location
+
+
+validIndexOf :: Location -> QuadTree a -> Bool
+validIndexOf = not .: flip outOfBounds
 
 ---- Collate and run tests:
 
