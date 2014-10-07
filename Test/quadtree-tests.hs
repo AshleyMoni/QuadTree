@@ -7,6 +7,7 @@ module Main where
 import Data.QuadTree.Internal
 
 import Test.QuickCheck
+import Text.Show.Functions
 import System.Exit (exitSuccess, exitFailure)
 
 import Control.Lens (Lens', set, view)
@@ -166,6 +167,17 @@ prop_treeInequality = go . wrappedTree
           | allEqual [a,b,c,d] = False
         go (Node a b c d)      = and $ fmap go [a,b,c,d]
 
+{- Functor laws
+
+  fmap id = id
+  fmap (f . g) = fmap f . fmap g -}
+
+prop_functor1 :: Eq a => QuadTree a -> Bool
+prop_functor1 qt     = fmap id qt == qt
+
+prop_functor2 :: Eq c => QuadTree a -> (b -> c) -> (a -> b) -> Bool
+prop_functor2 qt f g = fmap (f . g) qt == (fmap f . fmap g) qt
+
 {- Lens laws
 
   view l (set l b a)  = b
@@ -193,6 +205,7 @@ prop_lens3 a b c (MkIndex location) =
 
 validIndexOf :: Location -> QuadTree a -> Bool
 validIndexOf = not .: flip outOfBounds
+
 
 ---- Collate and run tests:
 
