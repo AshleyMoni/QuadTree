@@ -21,7 +21,6 @@ import Control.Lens.Setter (set)
 import Control.Lens.Getter (view)
 import Control.Monad (replicateM)
 import Data.Functor ((<$>))
-import Control.Applicative ((<*>))
 import Data.Composition ((.:))
 
 {- Structure
@@ -80,17 +79,22 @@ generateIndexOf qt = do
 
 ---- Ex-nihilo QuadTree generator
 
-instance (Eq a, Arbitrary a) => Arbitrary (QuadTree a) where
+newtype GenTree a = Generated (QuadTree a)
+
+instance Show a => Show (GenTree a) where
+  show (Generated qt) = show qt
+
+instance (Eq a, Arbitrary a) => Arbitrary (GenTree a) where
   arbitrary = do
     Positive len <- arbitrary
     Positive wid <- arbitrary
     let depth = smallestDepth (len, wid)
     tree <- generateQuadrant depth
 
-    return Wrapper { treeLength = len,
-                     treeWidth = wid,
-                     treeDepth = depth,
-                     wrappedTree = tree }
+    return . Generated $ Wrapper { treeLength = len,
+                                   treeWidth = wid,
+                                   treeDepth = depth,
+                                   wrappedTree = tree }
 
 generateQuadrant :: (Eq a, Arbitrary a) => Int -> Gen (Quadrant a)
 generateQuadrant 0 = generateLeaf
@@ -105,7 +109,7 @@ generateNode n = do
   return (Node a b c d)
     where equalLeaves :: Eq a => [Quadrant a] -> Bool
           equalLeaves [Leaf a, Leaf b, Leaf c, Leaf d] = allEqual [a,b,c,d]
-          equalLeaves _ = False
+          equalLeaves _                                = False
 
 
 ---- General index generator
@@ -159,16 +163,16 @@ prop_APITreeInequality (Constructed qt) = go $ wrappedTree qt
 -- that generator.
 
 -- Inner tree representation cannot be deeper than defined depth
-prop_treeDepth :: QuadTree Bool -> Bool
-prop_treeDepth = go <$> treeDepth <*> wrappedTree
+prop_treeDepth :: GenTree Bool -> Bool
+prop_treeDepth (Generated qt) = go (treeDepth qt) (wrappedTree qt)
   where go :: Int -> Quadrant a -> Bool
         go _ (Leaf _) = True
         go 0 _        = False
         go n (Node a b c d) = and $ fmap (go (n - 1)) [a,b,c,d]
 
 -- Inner tree representation cannot have branches holding four equal leaves
-prop_treeInequality :: QuadTree Bool -> Bool
-prop_treeInequality = go . wrappedTree
+prop_treeInequality :: GenTree Bool -> Bool
+prop_treeInequality (Generated qt) = go $ wrappedTree qt
   where go :: Eq a => Quadrant a -> Bool
         go (Leaf _)            = True
         go (Node (Leaf a) (Leaf b) (Leaf c) (Leaf d))
@@ -180,11 +184,11 @@ prop_treeInequality = go . wrappedTree
   fmap id = id
   fmap (f . g) = fmap f . fmap g -}
 
-prop_functor1 :: Eq a => QuadTree a -> Bool
-prop_functor1 qt     = fmap id qt == qt
+prop_functor1 :: Eq a => GenTree a -> Bool
+prop_functor1 (Generated qt)     = fmap id qt == qt
 
-prop_functor2 :: Eq c => QuadTree a -> (b -> c) -> (a -> b) -> Bool
-prop_functor2 qt f g = fmap (f . g) qt == (fmap f . fmap g) qt
+prop_functor2 :: Eq c => GenTree a -> (b -> c) -> (a -> b) -> Bool
+prop_functor2 (Generated qt) f g = fmap (f . g) qt == (fmap f . fmap g) qt
 
 {- Lens laws
 
@@ -192,20 +196,20 @@ prop_functor2 qt f g = fmap (f . g) qt == (fmap f . fmap g) qt
   set l (view l a) a  = a
   set l c (set l b a) = set l c a -}
 
-prop_lens1 :: Eq a => QuadTree a -> a -> Index -> Property
-prop_lens1 a b (MkIndex location) =
+prop_lens1 :: Eq a => GenTree a -> a -> Index -> Property
+prop_lens1 (Generated a) b (MkIndex location) =
   location `validIndexOf` a  ==>  view l (set l b a) == b
   where l :: Eq a => Lens' (QuadTree a) a
         l = atLocation location
 
-prop_lens2 :: Eq a => QuadTree a -> Index -> Property
-prop_lens2 a (MkIndex location) =
+prop_lens2 :: Eq a => GenTree a -> Index -> Property
+prop_lens2 (Generated a) (MkIndex location) =
   location `validIndexOf` a  ==>  set l (view l a) a == a
   where l :: Eq a => Lens' (QuadTree a) a
         l = atLocation location
 
-prop_lens3 :: Eq a => QuadTree a -> a -> a -> Index -> Property
-prop_lens3 a b c (MkIndex location) =
+prop_lens3 :: Eq a => GenTree a -> a -> a -> Index -> Property
+prop_lens3 (Generated a) b c (MkIndex location) =
   location `validIndexOf` a  ==>  set l c (set l b a) == set l c a
   where l :: Eq a => Lens' (QuadTree a) a
         l = atLocation location
