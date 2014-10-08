@@ -6,11 +6,19 @@ module Main where
 
 import Data.QuadTree.Internal
 
-import Test.QuickCheck
-import Text.Show.Functions
+import Test.QuickCheck.Arbitrary (Arbitrary, arbitrary)
+import Test.QuickCheck.Modifiers (Positive(..), NonNegative(..))
+import Test.QuickCheck.Gen (Gen, choose, oneof, suchThat,
+                            listOf, infiniteListOf)
+import Test.QuickCheck.Property (Property, (==>))
+import Test.QuickCheck.All (quickCheckAll)
+
+import Text.Show.Functions ()
 import System.Exit (exitSuccess, exitFailure)
 
-import Control.Lens (Lens', set, view)
+import Control.Lens.Type (Lens')
+import Control.Lens.Setter (set)
+import Control.Lens.Getter (view)
 import Control.Monad (replicateM)
 import Data.Functor ((<$>))
 import Control.Applicative ((<*>))
