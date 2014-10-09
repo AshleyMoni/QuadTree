@@ -58,12 +58,12 @@ instance Show a => Show (APITree a) where
 instance (Eq a, Arbitrary a) => Arbitrary (APITree a) where
   arbitrary = do
     Positive len <- arbitrary
-    Positive wid  <- arbitrary
-    baseValue <- arbitrary
+    Positive wid <- arbitrary
+    baseValue    <- arbitrary
     let baseTree = makeTree (len, wid) baseValue
 
     indices <- listOf $ generateIndexOf baseTree
-    values <- infiniteListOf arbitrary
+    values  <- infiniteListOf arbitrary
     let setList = zip indices values
 
     return . Constructed $ foldr setAt baseTree setList
@@ -73,7 +73,7 @@ instance (Eq a, Arbitrary a) => Arbitrary (APITree a) where
 generateIndexOf :: QuadTree a -> Gen Location
 generateIndexOf qt = do
   x <- choose (0, treeLength qt - 1)
-  y <- choose (0, treeWidth qt - 1)
+  y <- choose (0, treeWidth qt  - 1)
   return (x,y)
 
 
@@ -142,8 +142,8 @@ instance Show Index where
 prop_APITreeDepth :: APITree Bool -> Bool
 prop_APITreeDepth (Constructed qt) = go (treeDepth qt) (wrappedTree qt)
   where go :: Int -> Quadrant a -> Bool
-        go _ (Leaf _) = True
-        go 0 _        = False
+        go _ (Leaf _)       = True
+        go 0 _              = False
         go n (Node a b c d) = and $ fmap (go (n - 1)) [a,b,c,d]
 
 -- Inner tree representation cannot have branches holding four equal leaves
@@ -153,7 +153,7 @@ prop_APITreeInequality (Constructed qt) = go $ wrappedTree qt
         go (Leaf _)            = True
         go (Node (Leaf a) (Leaf b) (Leaf c) (Leaf d))
           | allEqual [a,b,c,d] = False
-        go (Node a b c d) = and $ fmap go [a,b,c,d]
+        go (Node a b c d)      = and $ fmap go [a,b,c,d]
 
 
 ---- Ex Nihilo QuadTree tests
@@ -166,8 +166,8 @@ prop_APITreeInequality (Constructed qt) = go $ wrappedTree qt
 prop_treeDepth :: GenTree Bool -> Bool
 prop_treeDepth (Generated qt) = go (treeDepth qt) (wrappedTree qt)
   where go :: Int -> Quadrant a -> Bool
-        go _ (Leaf _) = True
-        go 0 _        = False
+        go _ (Leaf _)       = True
+        go 0 _              = False
         go n (Node a b c d) = and $ fmap (go (n - 1)) [a,b,c,d]
 
 -- Inner tree representation cannot have branches holding four equal leaves
