@@ -73,7 +73,7 @@ atLocation index = lens (getLocation index) (setLocation index)
 -- |Getter for the value at a given location for a 'QuadTree'.
 getLocation :: Location -> QuadTree a -> a
 getLocation index tree
-  | outOfBounds tree index =
+  | index `outOfBounds` tree =
       error "Location index out of QuadTree bounds."
   | otherwise =
       go (offsetIndex tree index) (treeDepth tree) (wrappedTree tree)
@@ -95,7 +95,7 @@ getLocation index tree
 -- the new value.
 setLocation :: forall a. Eq a => Location -> QuadTree a -> a -> QuadTree a
 setLocation index tree new
-  | outOfBounds tree index =
+  | index `outOfBounds` tree =
       error "Location index out of QuadTree bounds."
   | otherwise =
       onQuads (go (offsetIndex tree index) (treeDepth tree)) tree
@@ -121,8 +121,8 @@ setLocation index tree new
 
 -- |Checks if a 'Location' is outside the boundaries of a 'QuadTree'.
 
-outOfBounds :: QuadTree a -> Location -> Bool
-outOfBounds tree (x,y) = x < 0 || y < 0
+outOfBounds :: Location -> QuadTree a -> Bool
+outOfBounds (x,y) tree = x < 0 || y < 0
                          || x >= treeLength tree
                          || y >= treeWidth  tree
 

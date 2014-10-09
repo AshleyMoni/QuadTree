@@ -216,7 +216,7 @@ prop_lens3 (Generated a) b c (MkIndex location) =
 
 
 validIndexOf :: Location -> QuadTree a -> Bool
-validIndexOf = not .: flip outOfBounds
+validIndexOf = not .: outOfBounds
 
 
 ---- Collate and run tests:
