@@ -67,7 +67,7 @@ instance (Eq a, Arbitrary a) => Arbitrary (APITree a) where
     let setList = zip indices values
 
     return . Constructed $ foldr setAt baseTree setList
-      where setAt (index, value) = set (atLocation index) value
+      where setAt (index, value) qt = setLocation index qt value
 
 -- Generates a random valid location index for a quadtree
 generateIndexOf :: QuadTree a -> Gen Location

@@ -15,7 +15,7 @@ import Control.Lens.Lens (lens)
 import Data.List (find, sortBy)
 import Data.Function (on)
 import Data.Composition ((.:))
-import Control.Applicative ((<*>))
+import Control.Applicative ((<$>), (<*>))
 
 -- Foldable:
 import Data.Foldable (Foldable, foldr)
@@ -61,44 +61,52 @@ instance Functor Quadrant where
                                 (fmap fn c)
                                 (fmap fn d)
 
--- _head :: Functor f => (a -> f a) -> [a] -> f [a]
--- _head f (x:xs) = fmap (:xs) (f x)
-
 ---- Quadrant lenses:
 
-_a :: Eq a => Lens' (Quadrant a) (Quadrant a)
+_a :: forall a. Eq a => Lens' (Quadrant a) (Quadrant a)
 _a f (Node a b c d) = fmap (\x -> fuse $ Node x b c d) (f a)
 _a f leaf           = fmap embed (f leaf)
-  where -- embed :: (Quadrant a) -> Quadrant a
+  where embed :: Quadrant a -> Quadrant a
         embed x | x == leaf = leaf
                 | otherwise = Node x leaf leaf leaf
 
-_b :: Eq a => Lens' (Quadrant a) (Quadrant a)
+_b :: forall a. Eq a => Lens' (Quadrant a) (Quadrant a)
 _b f (Node a b c d) = fmap (\x -> fuse $ Node a x c d) (f b)
 _b f leaf           = fmap embed (f leaf)
-  where embed x | x == leaf = leaf
+  where embed :: Quadrant a -> Quadrant a
+        embed x | x == leaf = leaf
                 | otherwise = Node leaf x leaf leaf
 
-_c :: Eq a => Lens' (Quadrant a) (Quadrant a)
+_c :: forall a. Eq a => Lens' (Quadrant a) (Quadrant a)
 _c f (Node a b c d) = fmap (\x -> fuse $ Node a b x d) (f c)
 _c f leaf           = fmap embed (f leaf)
-  where embed x | x == leaf = leaf
+  where embed :: Quadrant a -> Quadrant a
+        embed x | x == leaf = leaf
                 | otherwise = Node leaf leaf x leaf
 
-_d :: Eq a => Lens' (Quadrant a) (Quadrant a)
+_d :: forall a. Eq a => Lens' (Quadrant a) (Quadrant a)
 _d f (Node a b c d) = fmap (\x -> fuse $ Node a b c x) (f d)
 _d f leaf           = fmap embed (f leaf)
-  where embed x | x == leaf = leaf
+  where embed :: Quadrant a -> Quadrant a
+        embed x | x == leaf = leaf
                 | otherwise = Node leaf leaf leaf x
 
+_wrappedTree :: Lens' (QuadTree a) (Quadrant a)
+_wrappedTree f qt = (\x -> qt {wrappedTree = x}) <$> f (wrappedTree qt)
+
 ---- Index access:
+
+verifyLocation :: Location -> Lens' (QuadTree a) (QuadTree a)
+verifyLocation index f qt
+  | index `outOfBounds` qt = error "Location index out of QuadTree bounds."
+  | otherwise              = f qt
 
 -- |Lens for accessing and manipulating data at a specific
 -- location.
 --
 -- This is simply 'getLocation' and 'setLocation' wrapped into a lens.
 atLocation :: Eq a => Location -> Lens' (QuadTree a) a
-atLocation index = lens (getLocation index) (setLocation index)
+atLocation = lens <$> getLocation <*> setLocation
 
 modLocation :: forall a. Eq a => Location -> (a -> a) -> QuadTree a -> QuadTree a
 modLocation index fn tree
