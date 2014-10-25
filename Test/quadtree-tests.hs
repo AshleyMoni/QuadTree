@@ -112,6 +112,13 @@ generateNode n = do
           equalLeaves _                                = False
 
 
+-- Ex-nihilo Quadrant generator
+
+instance (Eq a, Arbitrary a) => Arbitrary (Quadrant a) where
+  arbitrary = do
+    NonNegative depth <- arbitrary
+    generateQuadrant depth
+
 ---- General index generator
 
 -- Ideally, we'd be able to generate random dimensionally valid lenses as

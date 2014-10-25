@@ -94,12 +94,12 @@ _d f leaf           = fmap embed (f leaf)
 _wrappedTree :: Lens' (QuadTree a) (Quadrant a)
 _wrappedTree f qt = (\x -> qt {wrappedTree = x}) <$> f (wrappedTree qt)
 
----- Index access:
-
 verifyLocation :: Location -> Lens' (QuadTree a) (QuadTree a)
 verifyLocation index f qt
   | index `outOfBounds` qt = error "Location index out of QuadTree bounds."
   | otherwise              = f qt
+
+---- Index access:
 
 -- |Lens for accessing and manipulating data at a specific
 -- location.
