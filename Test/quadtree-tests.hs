@@ -66,8 +66,7 @@ instance (Eq a, Arbitrary a) => Arbitrary (APITree a) where
     values  <- infiniteListOf arbitrary
     let setList = zip indices values
 
-    return . Constructed $ foldr setAt baseTree setList
-      where setAt (index, value) qt = setLocation index qt value
+    return . Constructed $ foldr (uncurry setLocation) baseTree setList
 
 -- Generates a random valid location index for a quadtree
 generateIndexOf :: QuadTree a -> Gen Location
@@ -243,9 +242,9 @@ main = do
 
 -- x' :: QuadTree Int
 -- x' = Wrapper { treeLength = 6
---             , treeWidth = 5
---             , treeDepth = 3
---             , wrappedTree = y' }
+--              , treeWidth = 5
+--              , treeDepth = 3
+--              , wrappedTree = y' }
 
 -- y' :: Quadrant Int
 -- y' = Node (Leaf 0)

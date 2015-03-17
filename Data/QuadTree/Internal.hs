@@ -108,8 +108,6 @@ verifyLocation index f qt
 
 -- |Lens for accessing and manipulating data at a specific
 -- location.
---
--- This is simply 'getLocation' and 'setLocation' wrapped into a lens.
 atLocation :: forall a. Eq a => Location -> Lens' (QuadTree a) a
 atLocation index fn qt = (verifyLocation index . _wrappedTree .
                           go (offsetIndex qt index) (treeDepth qt)) fn qt
@@ -123,19 +121,23 @@ atLocation index fn qt = (verifyLocation index . _wrappedTree .
       where recurse = go (x `mod` mid, y `mod` mid) (n - 1)
             mid = 2 ^ (n - 1)
 
-mapLocation :: Eq a => Location -> (a -> a) -> QuadTree a -> QuadTree a
-mapLocation index = over (atLocation index)
-
 -- |Getter for the value at a given location for a 'QuadTree'.
 getLocation :: Eq a => Location -> QuadTree a -> a
-getLocation index = view (atLocation index)
+getLocation = view . atLocation
 
 -- |Setter for the value at a given location for a 'QuadTree'.
 --
 -- This automatically compresses the 'QuadTree' nodes if possible with
 -- the new value.
-setLocation :: forall a. Eq a => Location -> a -> QuadTree a -> QuadTree a
-setLocation index = set (atLocation index)
+setLocation :: Eq a => Location -> a -> QuadTree a -> QuadTree a
+setLocation = set . atLocation
+
+-- |Modifies value at a given location for a 'QuadTree'.
+--
+-- This automatically compresses the 'QuadTree' nodes if possible with
+-- the new value.
+mapLocation :: Eq a => Location -> (a -> a) -> QuadTree a -> QuadTree a
+mapLocation = over . atLocation
 
 ---- Helpers:
 
@@ -325,8 +327,8 @@ sortTilesBy fn = sortBy (fn `on` fst)
 -- with all cells filled with a default value.
 
 makeTree :: (Int, Int) -- ^ (Length, Width)
-                  -> a -- ^ Initial element to fill
-                  -> QuadTree a
+         -> a          -- ^ Initial element to fill
+         -> QuadTree a
 makeTree (x,y) a
   | x <= 0 || y <= 0 = error "Invalid dimensions for tree."
   | otherwise = Wrapper { wrappedTree = Leaf a
@@ -352,7 +354,7 @@ smallestDepth (x,y) = depth
 
 showTree :: Eq a => (a -> Char) -- ^ Function to generate characters for each
                                 -- 'QuadTree' element.
-         -> QuadTree a -> String
+                 -> QuadTree a -> String
 showTree printer tree = breakString (treeLength tree) string
   where string   = map printer grid
         grid = [getLocation (x,y) tree |
@@ -367,5 +369,5 @@ showTree printer tree = breakString (treeLength tree) string
 
 printTree :: Eq a => (a -> Char) -- ^ Function to generate characters for each
                                  -- 'QuadTree' element.
-          -> QuadTree a -> IO ()
+                  -> QuadTree a -> IO ()
 printTree = putStr .: showTree
