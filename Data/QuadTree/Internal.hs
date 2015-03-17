@@ -10,7 +10,8 @@
 module Data.QuadTree.Internal where
 
 import Control.Lens.Type (Lens')
-import Control.Lens.Lens (lens)
+import Control.Lens.Setter (over, set)
+import Control.Lens.Getter (view)
 
 import Data.List (find, sortBy)
 import Data.Function (on)
@@ -85,11 +86,15 @@ _c f leaf           = fmap embed (f leaf)
                 | otherwise = Node leaf leaf x leaf
 
 _d :: forall a. Eq a => Lens' (Quadrant a) (Quadrant a)
-_d f (Node a b c d) = fmap (\x -> fuse $ Node a b c x) (f d)
+_d f (Node a b c d) = fmap (fuse . Node a b c) (f d)
 _d f leaf           = fmap embed (f leaf)
   where embed :: Quadrant a -> Quadrant a
         embed x | x == leaf = leaf
                 | otherwise = Node leaf leaf leaf x
+
+_leaf :: Lens' (Quadrant a) a
+_leaf f (Leaf leaf) = Leaf <$> f leaf
+_leaf _ _           = error "Wrapped tree is deeper than cached tree depth."
 
 _wrappedTree :: Lens' (QuadTree a) (Quadrant a)
 _wrappedTree f qt = (\x -> qt {wrappedTree = x}) <$> f (wrappedTree qt)
@@ -105,77 +110,32 @@ verifyLocation index f qt
 -- location.
 --
 -- This is simply 'getLocation' and 'setLocation' wrapped into a lens.
-atLocation :: Eq a => Location -> Lens' (QuadTree a) a
-atLocation = lens <$> getLocation <*> setLocation
-
-modLocation :: forall a. Eq a => Location -> (a -> a) -> QuadTree a -> QuadTree a
-modLocation index fn tree
-  | index `outOfBounds` tree =
-      error "Location index out of QuadTree bounds."
-  | otherwise =
-      onQuads (go (offsetIndex tree index) (treeDepth tree)) tree
+atLocation :: forall a. Eq a => Location -> Lens' (QuadTree a) a
+atLocation index fn qt = (verifyLocation index . _wrappedTree .
+                          go (offsetIndex qt index) (treeDepth qt)) fn qt
   where
-    go :: Eq a => Location -> Int -> Quadrant a -> Quadrant a
-    go _     0 (Leaf old) = fmap fn (Leaf old)
-    go (x,y) n (Leaf old) = go (x,y) n (Node leaf leaf leaf leaf)
-      where leaf = Leaf old
-    go _     0 _    = error "Wrapped tree is deeper than tree depth."
-    go (x,y) n (Node a b c d) = fusedNode
-      where fusedNode = fuse newNode
-            newNode
-              | y < mid   = if x < mid then Node (recurse a) b c d
-                                       else Node a (recurse b) c d
-              | otherwise = if x < mid then Node a b (recurse c) d
-                                       else Node a b c (recurse d)
-            recurse = go (x `mod` mid, y `mod` mid) (n - 1)
+    go :: Eq a => Location -> Int -> Lens' (Quadrant a) a
+    go _     0 = _leaf
+    go (x,y) n | y < mid   = if x < mid then _a . recurse
+                                        else _b . recurse
+               | otherwise = if x < mid then _c . recurse
+                                        else _d . recurse
+      where recurse = go (x `mod` mid, y `mod` mid) (n - 1)
             mid = 2 ^ (n - 1)
 
+mapLocation :: Eq a => Location -> (a -> a) -> QuadTree a -> QuadTree a
+mapLocation index = over (atLocation index)
+
 -- |Getter for the value at a given location for a 'QuadTree'.
-getLocation :: Location -> QuadTree a -> a
-getLocation index tree
-  | index `outOfBounds` tree =
-      error "Location index out of QuadTree bounds."
-  | otherwise =
-      go (offsetIndex tree index) (treeDepth tree) (wrappedTree tree)
-  where
-    go :: Location -> Int -> Quadrant a -> a
-    go _ _ (Leaf x) = x
-    go _ 0 _        = error "Wrapped tree is deeper than tree depth."
-    go (x,y) n (Node a b c d) =
-      go (x `mod` mid, y `mod` mid) (n - 1) node
-      where mid = 2 ^ (n - 1)
-            node | y < mid   = if x < mid then a
-                                          else b
-                 | otherwise = if x < mid then c
-                                          else d
+getLocation :: Eq a => Location -> QuadTree a -> a
+getLocation index = view (atLocation index)
 
 -- |Setter for the value at a given location for a 'QuadTree'.
 --
 -- This automatically compresses the 'QuadTree' nodes if possible with
 -- the new value.
-setLocation :: forall a. Eq a => Location -> QuadTree a -> a -> QuadTree a
-setLocation index tree new
-  | index `outOfBounds` tree =
-      error "Location index out of QuadTree bounds."
-  | otherwise =
-      onQuads (go (offsetIndex tree index) (treeDepth tree)) tree
-  where
-    go :: Eq a => Location -> Int -> Quadrant a -> Quadrant a
-    go (x,y) n (Leaf old)
-      | old == new  = Leaf old
-      |   n == 0    = Leaf new
-      | otherwise   = go (x,y) n (Node l l l l)
-      where l = Leaf old
-    go _     0 _    = error "Wrapped tree is deeper than tree depth."
-    go (x,y) n (Node a b c d) = fusedNode
-      where fusedNode = fuse newNode
-            newNode
-              | y < mid   = if x < mid then Node (recurse a) b c d
-                                       else Node a (recurse b) c d
-              | otherwise = if x < mid then Node a b (recurse c) d
-                                       else Node a b c (recurse d)
-            recurse = go (x `mod` mid, y `mod` mid) (n - 1)
-            mid = 2 ^ (n - 1)
+setLocation :: forall a. Eq a => Location -> a -> QuadTree a -> QuadTree a
+setLocation index = set (atLocation index)
 
 ---- Helpers:
 
@@ -390,8 +350,8 @@ smallestDepth (x,y) = depth
 -- not 'Text.show' the 'QuadTree'. It pretty prints it. The name
 -- is simply a mnemonic for its @'QuadTree' -> String@ behaviour.
 
-showTree :: (a -> Char) -- ^ Function to generate characters for each
-                        -- 'QuadTree' element.
+showTree :: Eq a => (a -> Char) -- ^ Function to generate characters for each
+                                -- 'QuadTree' element.
          -> QuadTree a -> String
 showTree printer tree = breakString (treeLength tree) string
   where string   = map printer grid
@@ -405,7 +365,7 @@ showTree printer tree = breakString (treeLength tree) string
 
 -- |As 'showTree' above, but also prints it.
 
-printTree :: (a -> Char) -- ^ Function to generate characters for each
-                         -- 'QuadTree' element.
+printTree :: Eq a => (a -> Char) -- ^ Function to generate characters for each
+                                 -- 'QuadTree' element.
           -> QuadTree a -> IO ()
 printTree = putStr .: showTree
