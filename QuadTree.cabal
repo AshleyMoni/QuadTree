@@ -10,7 +10,7 @@ name:                QuadTree
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             0.10.2
+version:             0.11.0
 
 -- A short (one-line) description of the package.
 synopsis:            QuadTree library for Haskell, with lens support.
@@ -52,7 +52,7 @@ library
 
   -- Other library packages from which modules are imported.
   build-depends:       base >= 4.6 && <= 4.8,
-                       lens >= 4.1 && <= 4.7,
+                       lens >= 4.1 && <= 4.8,
                        composition ==1.0.*
 
   -- http://www.vex.net/~trebla/haskell/cabal-cabal.xhtml

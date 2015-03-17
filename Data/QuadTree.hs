@@ -39,7 +39,7 @@ module Data.QuadTree (
   QuadTree, makeTree,
   -- * Index access
   -- $locations
-  Location, getLocation, setLocation, atLocation,
+  Location, atLocation, getLocation, setLocation, mapLocation,
   -- * Functor
   fuseTree, tmap,
   -- * Foldable
