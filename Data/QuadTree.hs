@@ -6,10 +6,10 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-|
-Module      : QuadTree
+Module      : Data.QuadTree
 Description : Region quadtrees with lens support.
-Copyright   : (c) Ashley Moni, 2014
-License     : GPL-3
+Copyright   : (c) Ashley Moni, 2015
+License     : BSD3
 Maintainer  : Ashley Moni <ashley.moni1@gmail.com>
 Stability   : Stable
 

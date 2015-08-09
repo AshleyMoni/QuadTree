@@ -1,11 +1,22 @@
+{-# OPTIONS_HADDOCK show-extensions #-}
+
 {-# LANGUAGE Safe #-}
 
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
--- The QTInternals library is a separately encapsulated subset of
--- the QuadTree library, strictly for the purpose of exposing inner
--- structure and functions to the testing suites.
+{-|
+Module      : Data.QuadTree.Internal
+Description : Internals for the Data.QuadTree library.
+Copyright   : (c) Ashley Moni, 2015
+License     : BSD3
+Maintainer  : Ashley Moni <ashley.moni1@gmail.com>
+Stability   : Stable
+
+The QuadTree.Internals library is a separately encapsulated subset of
+the QuadTree library, strictly for the purpose of exposing inner
+structure and functions to the testing suites.
+|-}
 
 module Data.QuadTree.Internal where
 
@@ -16,11 +27,6 @@ import Control.Lens.Getter (view)
 import Data.List (find, sortBy)
 import Data.Function (on)
 import Data.Composition ((.:))
-import Control.Applicative ((<$>), (<*>))
-
--- Foldable:
-import Data.Foldable (Foldable, foldr)
-import Prelude hiding (foldr)
 
 ---- Structures:
 
@@ -40,13 +46,22 @@ data QuadTree a = Wrapper { wrappedTree :: Quadrant a
                           , treeDepth :: Int }
   deriving (Show, Read, Eq)
 
+-- |'QuadTree's are 'Functor's, and their elements can be fmapped over.
 instance Functor QuadTree where
   fmap fn = onQuads $ fmap fn
 
+-- |'QuadTree's are 'Foldable', though the traversal path is a complex
+-- recursive enumeration of internal 'Quadrant's. Don't use folds that aren't
+-- ordering agnostic.
 instance Foldable QuadTree where
   foldr = foldTree
 
 -- Quadrants:
+
+-- |The internal data structure of a 'QuadTree'.
+--
+-- Each 'Quadrant' consists of either a terminating Leaf node, or
+-- four further 'Quadrant's.
 
 data Quadrant a = Leaf a
                 | Node (Quadrant a)
@@ -55,6 +70,7 @@ data Quadrant a = Leaf a
                        (Quadrant a)
   deriving (Show, Read, Eq)
 
+-- |'Quadrant's are 'Functor's. -- You can fmap all their recursive leaf node.
 instance Functor Quadrant where
   fmap fn (Leaf x)       = Leaf (fn x)
   fmap fn (Node a b c d) = Node (fmap fn a)
@@ -64,6 +80,7 @@ instance Functor Quadrant where
 
 ---- Quadrant lenses:
 
+-- |Lens for the top left 'Quadrant' of a node.
 _a :: forall a. Eq a => Lens' (Quadrant a) (Quadrant a)
 _a f (Node a b c d) = fmap (\x -> fuse $ Node x b c d) (f a)
 _a f leaf           = fmap embed (f leaf)
@@ -71,6 +88,7 @@ _a f leaf           = fmap embed (f leaf)
         embed x | x == leaf = leaf
                 | otherwise = Node x leaf leaf leaf
 
+-- |Lens for the top right 'Quadrant' of a node.
 _b :: forall a. Eq a => Lens' (Quadrant a) (Quadrant a)
 _b f (Node a b c d) = fmap (\x -> fuse $ Node a x c d) (f b)
 _b f leaf           = fmap embed (f leaf)
@@ -78,6 +96,7 @@ _b f leaf           = fmap embed (f leaf)
         embed x | x == leaf = leaf
                 | otherwise = Node leaf x leaf leaf
 
+-- |Lens for the bottom left 'Quadrant' of a node.
 _c :: forall a. Eq a => Lens' (Quadrant a) (Quadrant a)
 _c f (Node a b c d) = fmap (\x -> fuse $ Node a b x d) (f c)
 _c f leaf           = fmap embed (f leaf)
@@ -85,6 +104,7 @@ _c f leaf           = fmap embed (f leaf)
         embed x | x == leaf = leaf
                 | otherwise = Node leaf leaf x leaf
 
+-- |Lens for the bottom right 'Quadrant' of a node.
 _d :: forall a. Eq a => Lens' (Quadrant a) (Quadrant a)
 _d f (Node a b c d) = fmap (fuse . Node a b c) (f d)
 _d f leaf           = fmap embed (f leaf)
@@ -92,13 +112,18 @@ _d f leaf           = fmap embed (f leaf)
         embed x | x == leaf = leaf
                 | otherwise = Node leaf leaf leaf x
 
+-- |Lens for a terminate leaf value of a node.
 _leaf :: Lens' (Quadrant a) a
 _leaf f (Leaf leaf) = Leaf <$> f leaf
 _leaf _ _           = error "Wrapped tree is deeper than cached tree depth."
 
+-- |Lens to zoom into the internal data structure of a 'QuadTree',
+-- lensing past the metadata to reveal the 'Quadrant' inside.
 _wrappedTree :: Lens' (QuadTree a) (Quadrant a)
 _wrappedTree f qt = (\x -> qt {wrappedTree = x}) <$> f (wrappedTree qt)
 
+-- |Unsafe sanity test lens that makes sure a given location index exists
+-- within the relevant 'QuadTree'.
 verifyLocation :: Location -> Lens' (QuadTree a) (QuadTree a)
 verifyLocation index f qt
   | index `outOfBounds` qt = error "Location index out of QuadTree bounds."
@@ -142,38 +167,43 @@ mapLocation = over . atLocation
 ---- Helpers:
 
 -- |Checks if a 'Location' is outside the boundaries of a 'QuadTree'.
-
 outOfBounds :: Location -> QuadTree a -> Bool
 outOfBounds (x,y) tree = x < 0 || y < 0
                          || x >= treeLength tree
                          || y >= treeWidth  tree
 
 -- |Dimensions of a 'QuadTree', as an Int pair.
-
 treeDimensions :: QuadTree a
                -> (Int, Int) -- ^ (Length, Width)
 treeDimensions tree = (treeLength tree, treeWidth tree)
 
+-- |Add offsets to a location index for the purpose of querying
+-- the 'QuadTree' 's true reference frame.
 offsetIndex :: QuadTree a -> Location -> Location
 offsetIndex tree (x,y) = (x + xOffset, y + yOffset)
   where (xOffset, yOffset) = offsets tree
 
+-- |Offsets added to a 'QuadTree' 's true reference frame
+-- to reference elements in the centralized width and height.
 offsets :: QuadTree a -> (Int, Int)
 offsets tree = (xOffset, yOffset)
   where xOffset = (dimension - treeLength tree) `div` 2
         yOffset = (dimension - treeWidth  tree) `div` 2
         dimension = 2 ^ treeDepth tree
 
+-- |Merge 'Quadrant' into a leaf node if possible.
 fuse :: Eq a => Quadrant a -> Quadrant a
 fuse (Node (Leaf a) (Leaf b) (Leaf c) (Leaf d))
   | allEqual [a,b,c,d] = Leaf a
 fuse oldNode            = oldNode
 
+-- |Test if all elements in a list are equal.
 allEqual :: Eq a => [a] -> Bool
 allEqual = and . (zipWith (==) <*> tail)
 
 ---- Functor:
 
+-- |Apply a function to a 'QuadTree's internal 'Quadrant'.
 onQuads :: (Quadrant a -> Quadrant b) -> QuadTree a -> QuadTree b
 onQuads fn tree = tree {wrappedTree = fn (wrappedTree tree)}
 
@@ -196,13 +226,12 @@ onQuads fn tree = tree {wrappedTree = fn (wrappedTree tree)}
 
 fuseTree :: Eq a => QuadTree a -> QuadTree a
 fuseTree = onQuads fuseQuads
-
-fuseQuads :: Eq a => Quadrant a -> Quadrant a
-fuseQuads (Node a b c d) = fuse $ Node (fuseQuads a)
-                                       (fuseQuads b)
-                                       (fuseQuads c)
-                                       (fuseQuads d)
-fuseQuads leaf           = leaf
+  where fuseQuads :: Eq a => Quadrant a -> Quadrant a
+        fuseQuads (Node a b c d) = fuse $ Node (fuseQuads a)
+                                        (fuseQuads b)
+                                        (fuseQuads c)
+                                        (fuseQuads d)
+        fuseQuads leaf           = leaf
 
 -- |tmap is simply 'Control.Monad.fmap' with 'fuseTree' applied after.
 --
@@ -227,6 +256,9 @@ type Region = (Int, Int, Int, Int)
 -- 'Region' it subtends.
 
 type Tile a = (a, Region)
+
+-- |Foldr elements within a 'QuadTree', by first decomposing it into
+-- 'Tile's and then decomposing those into lists of identical data values.
 
 foldTree :: (a -> b -> b) -> b -> QuadTree a -> b
 foldTree fn z = foldr fn z . expand . tile
@@ -268,16 +300,19 @@ foldTiles fn z tree = go (treeRegion tree) (wrappedTree tree) z
         (xOffset, yOffset) = offsets tree
         treeIntersection   = regionIntersection $ boundaries tree
 
+-- |The region denoting an entire 'QuadTree'.
 treeRegion :: QuadTree a -> Region
 treeRegion tree = (0, 0, limit, limit)
   where limit = (2 ^ treeDepth tree) - 1
 
+-- |The boundary 'Region' of the internal 'QuadTree' 's true reference frame.
 boundaries :: QuadTree a -> Region
 boundaries tree = (left, top, right, bottom)
   where (left,  top)    = offsetIndex tree (0,0)
         (right, bottom) = offsetIndex tree (treeLength tree - 1,
                                             treeWidth  tree - 1)
 
+-- |'Region' that's an intersection between two othe 'Region's.
 regionIntersection :: Region -> Region -> Region
 regionIntersection (xl , yt , xr , yb )
                    (xl', yt', xr', yb') =
@@ -336,6 +371,7 @@ makeTree (x,y) a
                         , treeWidth  = y
                         , treeDepth = smallestDepth (x,y) }
 
+-- |Find the smallest tree depth that would encompass a given width and height.
 smallestDepth :: (Int, Int) -> Int
 smallestDepth (x,y) = depth
   where (depth, _)         = smallestPower
