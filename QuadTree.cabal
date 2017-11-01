@@ -52,7 +52,7 @@ library
 
   -- Other library packages from which modules are imported.
   build-depends:       base >= 4.6 && < 5,
-                       lens >= 4.1,
+                       lens >= 4.1 && < 4.16,
                        composition ==1.0.*
 
   -- http://www.vex.net/~trebla/haskell/cabal-cabal.xhtml
