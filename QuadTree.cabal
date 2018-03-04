@@ -51,8 +51,8 @@ library
   other-modules:       Data.QuadTree.Internal
 
   -- Other library packages from which modules are imported.
-  build-depends:       base >= 4.6 && < 4.10,
-                       lens >= 4.1 && < 4.13,
+  build-depends:       base >= 4.6 && < 5,
+                       lens >= 4.1 && < 4.16,
                        composition ==1.0.*
 
   -- http://www.vex.net/~trebla/haskell/cabal-cabal.xhtml
