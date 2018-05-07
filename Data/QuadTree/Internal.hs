@@ -78,6 +78,24 @@ instance Functor Quadrant where
                                 (fmap fn c)
                                 (fmap fn d)
 
+
+instance Applicative Quadrant where
+  pure = Leaf
+  Leaf f <*> Leaf x = Leaf $ f x
+  f@Leaf {} <*> Node a b c d =
+    Node (f <*> a) (f <*> b) (f <*> c) (f <*> d)
+  Node fa fb fc fd <*> x@Leaf {} =
+    Node (fa <*> x) (fb <*> x) (fc <*> x) (fd <*> x)
+  Node fa fb fc fd <*> Node a b c d =
+    Node (fa <*> a) (fb <*> b) (fc <*> c) (fd <*> d)
+
+
+instance Monad Quadrant where
+  return = pure
+  Leaf a >>= f = f a
+  Node a b c d >>= f = Node (a >>= f) (b >>= f) (c >>= f) (d >>= f)
+
+
 ---- Quadrant lenses:
 
 -- |Lens for the top left 'Quadrant' of a node.
